@@ -1,0 +1,6 @@
+{
+  "name": "Italienisch A1-A2 Quiz",
+  "description": "Ein interaktives Quiz für das italienische A1- und A2-Integrationscurriculum mit Fortschrittsanzeige, Prüfungs- und Übungsmodus sowie anpassbaren Hintergrundfarben und Audiotönen.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
