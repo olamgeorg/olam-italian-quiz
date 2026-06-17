@@ -31,6 +31,7 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
   designStyle = 'neobrutalist'
 }) => {
   const isN = designStyle === 'neobrutalist';
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   // In practice/remedial mode, we lock the answer after clicking
@@ -155,6 +156,61 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Custom Exit Confirmation Modal */}
+      {showQuitConfirm && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div 
+            className={`w-full max-w-md p-6 sm:p-8 space-y-6 text-center shadow-2xl transition-all ${
+              isN
+                ? 'bg-white border-4 border-[#4D3B3B] rounded-[32px] shadow-[8px_8px_0px_#4D3B3B] text-[#4D3B3B]'
+                : 'bg-white rounded-3xl border border-slate-200 text-slate-800'
+            }`}
+          >
+            <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
+              isN ? 'bg-[#FF8B8B] border-4 border-[#4D3B3B]' : 'bg-red-50 text-red-500'
+            }`}>
+              <Home className="w-8 h-8 font-black" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className={`text-xl sm:text-2xl font-black ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>
+                Quiz abbrechen?
+              </h3>
+              <p className={`text-sm font-bold ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
+                Ihr Fortschritt in dieser aktuellen Runde geht verloren. Möchten Sie wirklich zurück zum Hauptmenü?
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setShowQuitConfirm(false);
+                  onQuit();
+                }}
+                className={`py-3 px-4 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex-1 ${
+                  isN
+                    ? 'bg-[#FF5F5F] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:-translate-y-0.5 active:translate-y-0'
+                    : 'bg-red-500 hover:bg-red-650 text-white shadow-md'
+                }`}
+              >
+                Ja, beenden!
+              </button>
+              
+              <button
+                onClick={() => setShowQuitConfirm(false)}
+                className={`py-3 px-4 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex-1 ${
+                  isN
+                    ? 'bg-white text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:-translate-y-0.5 active:translate-y-0'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                Nein, weiter!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quiz Top Action Bar */}
       <div 
         className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 sm:px-6 transition-all duration-300 ${
@@ -166,11 +222,7 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
         {/* Progress & Title info */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              if (window.confirm('Möchten Sie dieses Quiz wirklich verlassen? Ihr aktueller Fortschritt in dieser Runde geht verloren.')) {
-                onQuit();
-              }
-            }}
+            onClick={() => setShowQuitConfirm(true)}
             className={`p-2.5 cursor-pointer transition-all ${
               isN
                 ? 'bg-[#FFF5F5] border-2 border-[#4D3B3B] rounded-xl text-[#FF6B6B] hover:bg-[#FFD2D2] shadow-[1px_1px_0px_#4D3B3B]'
@@ -236,12 +288,8 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
 
           {/* Quick exit confirmation */}
           <button
-            onClick={() => {
-              if (window.confirm('Sind Sie sicher, dass Sie diese Sitzung abbrechen wollen?')) {
-                onQuit();
-              }
-            }}
-            className="text-xs sm:text-sm text-[#FF6B6B] hover:text-[#4d3b3b] underline font-black cursor-pointer"
+            onClick={() => setShowQuitConfirm(true)}
+            className="text-xs sm:text-sm text-[#FF6B6B] hover:text-[#4d3b3b] underline font-black cursor-pointer bg-transparent border-0"
           >
             Aufgeben
           </button>

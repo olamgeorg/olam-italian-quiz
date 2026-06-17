@@ -417,5 +417,309 @@ export const QUESTIONS: Question[] = [
     correctAnswerIndex: 0,
     translation: 'Welches ist die Frist zur Beantragung der italienischen Staatsbürgerschaft für in Italien geborene Kinder von Ausländern, die bis zur Volljährigkeit legal und ununterbrochen im Land gelebt haben?',
     explanation: 'Nach Artikel 4 Absatz 2 des italienischen Staatsangehörigkeitsgesetzes können in Italien geborene ausländische Kinder nach Vollendung des 18. Lebensjahres die Staatsbürgerschaft erklären, müssen dies jedoch vor Vollendung des 19. Lebensjahres (also innerhalb eines Jahres nach dem 18. Geburtstag) tun.'
+  },
+  // --- ZUSÄTZLICHE NEUE FRAGEN ---
+  {
+    id: 'voc_8',
+    section: 'vocabulary',
+    level: 'A1',
+    questionText: 'Come si dice correttamente "Tschüss / Auf Wiedersehen" (informell) in italiano?',
+    options: [
+      'Ciao',
+      'Arrivederci',
+      'Grazie',
+      'Prego'
+    ],
+    correctAnswerIndex: 0,
+    translation: 'Wie sagt man korrekt "Tschüss / Auf Wiedersehen" (informell) auf Italienisch?',
+    explanation: '"Ciao" kann sowohl als lockere Begreußung ("Hallo") als auch zur Verabschiedung ("Tschüss") im Kreis von Freunden und Bekannten benutzt werden. "Arrivederci" ist die formellere Höflichkeitsform.'
+  },
+  {
+    id: 'voc_9',
+    section: 'vocabulary',
+    level: 'A1',
+    questionText: 'Quale colore descrive tipicamente il cielo in una bella giornata di sole?',
+    options: [
+      'Rosso',
+      'Verde',
+      'Azzurro',
+      'Giallo'
+    ],
+    correctAnswerIndex: 2,
+    translation: 'Welche Farbe beschreibt typischerweise den Himmel an einem schönen sonnigen Tag?',
+    explanation: '"Azzurro" bedeutet Himmelblau. Es ist auch die offizielle Farbe, die italienischen Nationalmannschaften ("Gli Azzurri") tragen. "Rosso" ist Rot, "Verde" ist Grün und "Giallo" ist Gelb.'
+  },
+  {
+    id: 'voc_10',
+    section: 'vocabulary',
+    level: 'A1',
+    questionText: 'Scegli la traduzione corretta per il pasto della sera in una famiglia italiana:',
+    options: [
+      'La colazione',
+      'Il pranzo',
+      'La cena',
+      'La merenda'
+    ],
+    correctAnswerIndex: 2,
+    translation: 'Wähle die richtige Übersetzung für das Abendessen in einer italienischen Familie:',
+    explanation: '"La cena" ist das Abendessen. Im italienischen Alltag ist "la colazione" das Frühstück, "il pranzo" das Mittagessen und "la merenda" das Vesper / der Nachmittagssnack für Kinder.'
+  },
+  {
+    id: 'voc_11',
+    section: 'vocabulary',
+    level: 'A2',
+    questionText: 'Se una persona ha un forte "mal di denti", da quale specialista deve andare per curarsi?',
+    options: [
+      'Dall\'avvocato',
+      'Dal dentista',
+      'Dal meccanico',
+      'Dal farmacista'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Wenn eine Person starke Zahnschmerzen ("mal di denti") hat, zu welchem Facharzt muss sie gehen, um behandelt zu werden?',
+    explanation: 'Bei Zahnschmerzen geht man zum Zahnarzt ("dal dentista"). "L\'avvocato" ist der Rechtsanwalt, "il meccanico" der Automechaniker und "il farmacista" der Apotheker.'
+  },
+  {
+    id: 'voc_12',
+    section: 'vocabulary',
+    level: 'A2',
+    questionText: 'Significato pratico del verbo "noleggare" (es. noleggare una vettura per le vacanze):',
+    options: [
+      'Ein Auto reparieren',
+      'Ein Auto mit Freunden putzen',
+      'Ein Auto mieten oder ausleihen',
+      'Ein Auto als Geschenk erhalten'
+    ],
+    correctAnswerIndex: 2,
+    translation: 'Praktische Bedeutung des Verbs "noleggare" (z.B. ein Fahrzeug für den Urlaub mieten):',
+    explanation: '"Noleggare" bedeutet mieten oder leihen. Dies ist eine wichtige A2-Vokabel für Alltags- und Urlaubssituationen (z.B. Autovermietung: "autonoleggio").'
+  },
+  {
+    id: 'voc_13',
+    section: 'vocabulary',
+    level: 'A2',
+    questionText: 'Quale animale domestico viene tradotto in italiano con il termine "il gatto"?',
+    options: [
+      'Der treue Hund',
+      'Die süße Katze',
+      'Das schnelle Pferd',
+      'Ein kleiner Kanarienvogel'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Welches Haustier wird im Italienischen mit "il gatto" übersetzt?',
+    explanation: '"Il gatto" ist die Katze. Der Hund heißt "il cane", das Pferd "il cavallo" und der Vogel "l\'uccello".'
+  },
+  {
+    id: 'gra_8',
+    section: 'grammar',
+    level: 'A1',
+    questionText: 'Completa la frase con la coniugazione corretta al presente: "Noi _______ di Roma."',
+    options: [
+      'sei',
+      'siamo',
+      'siete',
+      'sono'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Vervollständige den Satz mit der korrekten Präsenskonjugation: "Noi _______ di Roma."',
+    explanation: 'Für "noi" (wir) lautet die Form des Verbs essere "siamo". Also lautet der Satz: "Noi siamo di Roma" (Wir sind aus Rom).'
+  },
+  {
+    id: 'gra_9',
+    section: 'grammar',
+    level: 'A1',
+    questionText: 'Qual è la forma corretta al singolare del nome plurale "i libri"?',
+    options: [
+      'il librom',
+      'il libro',
+      'la libra',
+      'lo libro'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Was ist die korrekte Singularform des pluralen Nomens "i libri" (die Bücher)?',
+    explanation: '"Libri" ist der Plural von "libro", einem maskulinen Substantiv auf "-o". Der bestimmte Artikel im Singular ist "il". Somit heißt es: "il libro" (das Buch).'
+  },
+  {
+    id: 'gra_10',
+    section: 'grammar',
+    level: 'A1',
+    questionText: 'Scegli la preposizione articolata adatta per completare: "Le chiavi sono _______ (auf dem) tavolo."',
+    options: [
+      'nel',
+      'sul',
+      'al',
+      'dal'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Wähle die passende artikulierte Präposition: "Le chiavi sono _______ (auf dem) tavolo."',
+    explanation: 'Die deutsche Bedeutung "auf dem" entspricht im Italienischen der Präposition "su" verschmolzen mit dem maskulinen Artikel "il", woraus "sul" entsteht. "Le chiavi sono sul tavolo" (Die Schlüssel liegen auf dem Tisch).'
+  },
+  {
+    id: 'gra_11',
+    section: 'grammar',
+    level: 'A2',
+    questionText: 'Qual è il participio passato corretto del verbo "scrivere"?',
+    options: [
+      'scrivuto',
+      'scritato',
+      'scritto',
+      'scrivato'
+    ],
+    correctAnswerIndex: 2,
+    translation: 'Was ist das korrekte Partizip Perfekt des Verbs "scrivere" (schreiben)?',
+    explanation: 'Das Verb "scrivere" bildet ein unregelmäßiges Partizip Perfekt: "scritto". Konjugiert im Passato Prossimo heißt es: "Io ho scritto" (Ich habe geschrieben).'
+  },
+  {
+    id: 'gra_12',
+    section: 'grammar',
+    level: 'A2',
+    questionText: "Completa la lacuna con il verbo all'imperfetto indicativo per descrivere un'azione abituale passata: \"Quando ero piccolo/a, _______ (ich spielte) sempre a calcio.\"",
+    options: [
+      'ho giocato',
+      'giocavo',
+      'giocato',
+      'giocare'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Vervollständige die Lücke mit dem Imperfekt, um eine gewohnheitsmäßige Handlung in der Vergangenheit zu beschreiben: "Quando ero piccolo/a, _______ (ich spielte) sempre a calcio."',
+    explanation: '"Giocavo" ist die erste Person Singular des Verbs "giocare" im Imperfetto. Das Imperfetto beschreibt gewohnheitsmäßige, sich wiederholende Handlungen oder Zustände in der Vergangenheit.'
+  },
+  {
+    id: 'gra_13',
+    section: 'grammar',
+    level: 'A2',
+    questionText: 'Scegli la preposizione articolata richiesta per tradurre correttamente: "Questo regalo è destinato _______ (für die) bambini (m. pl.)."',
+    options: [
+      'a i',
+      'per i',
+      'nei',
+      'dai'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Wähle die zusammengesetzte Präposition, um korrekt zu übersetzen: "Questo regalo è destinato _______ (für die) bambini (m. pl.)."',
+    explanation: '"Für die" wird im Italienischen durch die Präposition "per" gefolgt von dem Artikel "i" ausgedrückt. Somit ergibt sich "per i bambini" (für die Kinder).'
+  },
+  {
+    id: 'dia_6',
+    section: 'dialogues',
+    level: 'A1',
+    questionContext: 'In un negozio di abbigliamento:\nCliente: "Scusi, posso provare questa camicia rossa?"\nCommesso: "_______"',
+    questionText: 'Scegli la risposta più naturale dell\'operatore commerciale:',
+    options: [
+      'No, preferisco mangiare una mela.',
+      'Certamente! I camerini sono in fondo a destra.',
+      'Sì, costa esattamente cento litri di latte.',
+      'Buonanotte, ci vediamo domani!'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Wähle die natürlichste Antwort des Verkaufsmitarbeiters:',
+    explanation: 'Auf die Frage nach dem Anprobieren eines Kleidungsstücks ist die einzig passende geschäftliche Floskel: "Certamente! I camerini sono in fondo a destra." (Sicher! Die Umkleidekabinen sind hinten rechts).'
+  },
+  {
+    id: 'dia_7',
+    section: 'dialogues',
+    level: 'A1',
+    questionText: 'Come si deve rispondere ed efficientemente alla domanda conoscitiva "Come ti chiami?"?',
+    options: [
+      'Sto benissimo, grazie mille.',
+      'Ho venticinque anni di età.',
+      'Mi chiamo Francesco e tu?',
+      'Vengo dalla Germania.'
+    ],
+    correctAnswerIndex: 2,
+    translation: 'Wie antwortet man höflich und flüssig auf die persönliche Frage "Wie heißt du?"?',
+    explanation: 'Auf "Come ti chiami?" antwortet man im Italienischen mit "Mi chiamo ..." (Ich heiße). Somit ist Option 3 die einzig richtige Wahl.'
+  },
+  {
+    id: 'dia_8',
+    section: 'dialogues',
+    level: 'A2',
+    questionContext: 'Al telefono con un ambulatorio:\nSegretaria: "Studio Medico Rossi, buongiorno. In cosa posso aiutarla?"\nCittadino tedesco: "Buongiorno, _______."',
+    questionText: 'Completa con la frase adatta e appropriata:',
+    options: [
+      'vorrei ordinare subito due pizze margherita da asporto',
+      'vorrei fissare un appuntamento per una visita medica',
+      'voglio comprare un biglietto aereo per Roma',
+      'preferisco giocare a tennis con gli amici'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Vervollständige mit dem passenden und angemessenen Satz:',
+    explanation: 'In einer Arztpraxis ruft man an, um einen Untersuchungstermin zu beantragen: "vorrei fissare un appuntamento per una visita medica" (ich würde gerne einen Termin für eine medizinische Untersuchung vereinbaren).'
+  },
+  {
+    id: 'dia_10',
+    section: 'dialogues',
+    level: 'A2',
+    questionContext: 'Dialogo lavorativo:\nImpiegato: "Signor Direttore, qual è la mia mansione principale oggi?"\nDirettore: "_______"',
+    questionText: 'Identifica la direttiva coerente:',
+    options: [
+      'Oggi devi inserire tutti i dati contabili nel computer.',
+      'La mia stazione meteo dice che domani nevica forte.',
+      'Il treno espresso parte puntualmente dal binario tre.',
+      'La pasta è già cotta, prepariamo la salsa!'
+    ],
+    correctAnswerIndex: 0,
+    translation: 'Finde die logisch zusammenhängende Arbeitsanweisung:',
+    explanation: '"Mansione" bedeutet Arbeitsaufgabe/Tätigkeit. Der Direktor gibt auf die Frage nach der Aufgabe des Tages die passende Anweisung: "Oggi devi inserire tutti i dati contabili nel computer" (Heute musst du alle Buchungsdaten in den Computer eingeben).'
+  },
+  {
+    id: 'cul_7',
+    section: 'culture',
+    level: 'A1',
+    questionText: 'Qual è la storica e bellissima città capitale della Repubblica Italiana?',
+    options: [
+      'Venezia',
+      'Milano',
+      'Roma',
+      'Napoli'
+    ],
+    correctAnswerIndex: 2,
+    translation: 'Welche ist die historische und wunderschöne Hauptstadt der Italienischen Republik?',
+    explanation: 'Rom (Roma) ist die Hauptstadt Italiens und das politische sowie historische Zentrum des Landes, in dem sich der Sitz von Parlament, Regierung und Staatspräsident befindet.'
+  },
+  {
+    id: 'cul_8',
+    section: 'culture',
+    level: 'A1',
+    questionText: 'Come viene indicata la copertura assicurativa obbligatoria di legge per i veicoli a motore in circolazione?',
+    options: [
+      'Poste Italiane SpA',
+      'RC Auto (Responsabilità Civile)',
+      'Istituto Nazionale di Statistica (Istat)',
+      'Tessera d\'Imbarco'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Wie wird die gesetzlich vorgeschriebene Kfz-Haftpflichtversicherung für Kraftfahrzeuge im Straßenverkehr bezeichnet?',
+    explanation: 'Die Kfz-Haftpflichtversicherung wird in Italien "RC Auto" genannt (Responsabilità Civile Autoveicoli). Sie muss für jedes im öffentlichen Raum angemeldete und bewegte Kraftfahrzeug nachgewiesen werden.'
+  },
+  {
+    id: 'cul_9',
+    section: 'culture',
+    level: 'A2',
+    questionText: 'Quale ente governativo italiano amministra le pensioni pubbliche, i contributi previdenziali e l\'indennità di disoccupazione?',
+    options: [
+      'Il Ministero della Difesa',
+      'L\'INPS (Istituto Nazionale Previdenza Sociale)',
+      'La Prefettura locale',
+      'La Questura competente'
+    ],
+    correctAnswerIndex: 1,
+    translation: 'Welche italienische Behörde verwaltet die gesetzlichen Renten, die Sozialabgaben und das Arbeitslosengeld?',
+    explanation: 'L\'INPS (Istituto Nazionale della Previdenza Sociale) ist das wichtigste Institut für soziale Vorsorge in Italien. Es ist zuständig für Rentenzahlungen, Krankengeld, Elternzeitgelder und Sozialhilfen.'
+  },
+  {
+    id: 'cul_10',
+    section: 'culture',
+    level: 'A2',
+    questionText: 'In conformità con la Costituzione, per quanti anni complessivi la legge stabilisce l\'obbligo scolastico (scuola dell\'obbligo) in Italia?',
+    options: [
+      'L\'obbligo dura solo 5 anni di scuola primaria.',
+      'Non esiste Schulpflicht sul territorio italiano.',
+      'Dura 10 anni in totale, fino al compimento dei 16 anni d\'età.',
+      'L\'obbligo scolastico si estende per 13 anni fino all\'università.'
+    ],
+    correctAnswerIndex: 2,
+    translation: 'Wie viele Jahre beträgt die gesetzliche Schulpflicht (scuola dell\'obbligo) in Italien laut Verfassung und Schulgesetzen?',
+    explanation: 'Die allgemeine Schulpflicht ("scuola dell\'obbligo") in Italien erstreckt sich über insgesamt 10 Jahre (von 6 bis 16 Jahren) und umfasst die Grundschule, Sekundarstufe I und den Beginn der Sekundarstufe II.'
   }
 ];

@@ -53,6 +53,9 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<'main' | 'quiz_session' | 'stats' | 'review' | 'finished_overview'>('main');
 
+  // Level selector state (None, A1, A2) to separate A1 from A2
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState<'all' | 'A1' | 'A2'>('all');
+
   // Theme, Sound & Style Configuration
   const [currentThemeId, setCurrentThemeId] = useState<string>('coral-sunset');
   const [designStyle, setDesignStyle] = useState<'neobrutalist' | 'modern'>('neobrutalist');
@@ -167,9 +170,13 @@ export default function App() {
 
   // Start a new basic category practice (e.g. 5 questions only to train a weakness)
   const handleStartCategoryQuiz = (sectionId: string) => {
-    const filtered = QUESTIONS.filter((q) => q.section === sectionId);
-    // Shuffle the matching ones and pick max 5
-    const shuffled = [...filtered].sort(() => 0.5 - Math.random()).slice(0, 5);
+    const filteredBySection = QUESTIONS.filter((q) => q.section === sectionId);
+    const levelFiltered = selectedLevelFilter === 'all'
+      ? filteredBySection
+      : filteredBySection.filter(q => q.level === selectedLevelFilter);
+
+    // Shuffle the matching ones and pick max 5 (or max available)
+    const shuffled = [...levelFiltered].sort(() => 0.5 - Math.random()).slice(0, Math.min(levelFiltered.length, 5));
 
     setActiveQuizMode('practice');
     setActiveQuestions(shuffled);
@@ -178,15 +185,23 @@ export default function App() {
 
   // Start a Standard General Practice Quiz (10 questions chosen randomly)
   const handleStartGeneralPractice = () => {
-    const shuffled = [...QUESTIONS].sort(() => 0.5 - Math.random()).slice(0, 10);
+    const levelFiltered = selectedLevelFilter === 'all'
+      ? QUESTIONS
+      : QUESTIONS.filter(q => q.level === selectedLevelFilter);
+
+    const shuffled = [...levelFiltered].sort(() => 0.5 - Math.random()).slice(0, Math.min(levelFiltered.length, 10));
     setActiveQuizMode('practice');
     setActiveQuestions(shuffled);
     setActiveTab('quiz_session');
   };
 
-  // Start custom Exam Mode (20 questions balanced across categories to match true syllabus mock, timed conditions)
+  // Start custom Exam Mode (proportional questions balanced across categories to match mock, timed conditions)
   const handleStartExamSimulation = () => {
-    // Select 5 questions from each of the 4 sections
+    const levelFiltered = selectedLevelFilter === 'all'
+      ? QUESTIONS
+      : QUESTIONS.filter(q => q.level === selectedLevelFilter);
+
+    // Select questions balanced across sections
     const idsBySection: Record<SectionId, Question[]> = {
       vocabulary: [],
       grammar: [],
@@ -194,15 +209,16 @@ export default function App() {
       culture: []
     };
 
-    QUESTIONS.forEach((q) => {
+    levelFiltered.forEach((q) => {
       idsBySection[q.section].push(q);
     });
 
     const selectedExamSet: Question[] = [];
     Object.keys(idsBySection).forEach((key) => {
       const shuffledSection = [...idsBySection[key as SectionId]].sort(() => 0.5 - Math.random());
-      // Pull 5 questions from each category (yields 20 questions total)
-      selectedExamSet.push(...shuffledSection.slice(0, 5));
+      // Pull proportional questions (e.g. 5 per category if combined, or 4 if filtered to keep appropriate size)
+      const perCategoryCount = selectedLevelFilter === 'all' ? 5 : 4;
+      selectedExamSet.push(...shuffledSection.slice(0, perCategoryCount));
     });
 
     // Final global shuffle of exam questions
@@ -311,6 +327,9 @@ export default function App() {
   // Find css styles based on selected dynamic background
   const activeTheme = THEMES.find((theme) => theme.id === currentThemeId) || THEMES[0];
   const isN = designStyle === 'neobrutalist';
+  const activePoolCount = selectedLevelFilter === 'all'
+    ? QUESTIONS.length
+    : QUESTIONS.filter((q) => q.level === selectedLevelFilter).length;
 
   return (
     <div
@@ -506,9 +525,94 @@ export default function App() {
                 >
                   <div className="text-center">
                     <span className={`text-[10px] font-mono tracking-wider uppercase font-black block ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-400'}`}>Fragen im Pool</span>
-                    <span className={`text-5xl font-black font-mono ${isN ? 'text-[#4D3B3B]' : 'text-indigo-650'}`}>{QUESTIONS.length}</span>
+                    <span className={`text-5xl font-black font-mono ${isN ? 'text-[#4D3B3B]' : 'text-indigo-650'}`}>{activePoolCount}</span>
                     <span className={`text-xs font-black block mt-1 ${isN ? 'text-[#4D3B3B]' : 'text-slate-500'}`}>100% Akkreditiert</span>
                   </div>
+                </div>
+              </div>
+
+              {/* LEVEL SEPARATION CONTROLLER */}
+              <div
+                className={`p-4 sm:p-5 rounded-2xl space-y-4 transition-all duration-300 ${
+                  isN
+                    ? 'bg-slate-50 border-4 border-[#4D3B3B] text-[#4D3B3B]'
+                    : 'bg-slate-50/60 border border-slate-150 text-slate-800'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black uppercase tracking-wider font-mono flex items-center gap-2">
+                      <span>📚</span> Italienisch-Niveau trennen & filtern:
+                    </h3>
+                    <p className={`text-xs font-bold leading-normal mt-0.5 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
+                      Klicken Sie unten auf ein Sprachniveau, um die Fragen, Kategorien und Prüfungen für die A1 o. A2 Prüfung separat zu üben.
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-block px-3 py-1 font-mono text-[10px] sm:text-xs font-black rounded-lg uppercase tracking-wide self-start sm:self-center ${
+                      isN
+                        ? 'bg-[#FFD93D] border-2 border-[#4D3B3B] text-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
+                        : 'bg-indigo-600 text-white shadow-sm'
+                    }`}
+                  >
+                    Fokus: {selectedLevelFilter === 'all' ? 'A1 & A2 Gemischt' : selectedLevelFilter === 'A1' ? 'Nur Niveau A1' : 'Nur Niveau A2'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setSelectedLevelFilter('all')}
+                    className={`py-3 px-3 rounded-xl text-center font-black transition-all cursor-pointer flex flex-col justify-center items-center w-full select-none ${
+                      selectedLevelFilter === 'all'
+                        ? isN
+                          ? 'bg-[#FFD93D] text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] -translate-y-0.5'
+                          : 'bg-indigo-600 text-white shadow-md border-transparent'
+                        : isN
+                          ? 'bg-white text-[#4D3B3B] border-2 border-[#4D3B3B] hover:bg-[#FFF8E1] hover:-translate-y-0.5 shadow-[2px_2px_0px_#4D3B3B]'
+                          : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-xs sm:text-sm font-black uppercase tracking-wide">Alle Niveaus (A1 + A2)</span>
+                    <span className="text-[10px] font-mono mt-1 opacity-90 font-bold">
+                      {QUESTIONS.length} Lerneinheiten
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedLevelFilter('A1')}
+                    className={`py-3 px-3 rounded-xl text-center font-black transition-all cursor-pointer flex flex-col justify-center items-center w-full select-none ${
+                      selectedLevelFilter === 'A1'
+                        ? isN
+                          ? 'bg-[#4ECDC4] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] -translate-y-0.5'
+                          : 'bg-teal-600 text-white shadow-md border-transparent'
+                        : isN
+                          ? 'bg-white text-[#4D3B3B] border-2 border-[#4D3B3B] hover:bg-[#FFF8E1] hover:-translate-y-0.5 shadow-[2px_2px_0px_#4D3B3B]'
+                          : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-xs sm:text-sm font-black uppercase tracking-wide">🏆 Niveau A1 (Anfänger)</span>
+                    <span className="text-[10px] font-mono mt-1 opacity-90 font-bold">
+                      {QUESTIONS.filter(q => q.level === 'A1').length} Lerneinheiten
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedLevelFilter('A2')}
+                    className={`py-3 px-3 rounded-xl text-center font-black transition-all cursor-pointer flex flex-col justify-center items-center w-full select-none ${
+                      selectedLevelFilter === 'A2'
+                        ? isN
+                          ? 'bg-[#FF6B6B] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] -translate-y-0.5'
+                          : 'bg-[#FF6B6B] text-white shadow-md border-transparent'
+                        : isN
+                          ? 'bg-white text-[#4D3B3B] border-2 border-[#4D3B3B] hover:bg-[#FFF8E1] hover:-translate-y-0.5 shadow-[2px_2px_0px_#4D3B3B]'
+                          : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-xs sm:text-sm font-black uppercase tracking-wide">🔥 Niveau A2 (Integration)</span>
+                    <span className="text-[10px] font-mono mt-1 opacity-90 font-bold">
+                      {QUESTIONS.filter(q => q.level === 'A2').length} Lerneinheiten
+                    </span>
+                  </button>
                 </div>
               </div>
 
