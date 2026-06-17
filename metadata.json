@@ -1,6 +1,6 @@
 {
-  "name": "Italienisch A1-A2 Quiz",
-  "description": "Ein interaktives Quiz für das italienische A1- und A2-Integrationscurriculum mit Fortschrittsanzeige, Prüfungs- und Übungsmodus sowie anpassbaren Hintergrundfarben und Audiotönen.",
+  "name": "Georg.edu Italienisch Integrationskurs",
+  "description": "Italienisches A1-A2 Integrationscurriculum-Trainingsportal der Georg.edu. Vollständig PWA-fähig für Offline-Übungen, mit integrierten Prifungsimulatoren und Schwäche-Trainer.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
