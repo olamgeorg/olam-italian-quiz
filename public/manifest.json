@@ -1,0 +1,22 @@
+{
+  "short_name": "Georg.edu",
+  "name": "Georg.edu Italienisch Integrationskurs",
+  "description": "Premium A1 & A2 Italienisch-Integrationsprüfung-Syllabus von Georg.edu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4D3B3B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=192&h=192&fit=crop&q=80",
+      "type": "image/jpeg",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=512&h=512&fit=crop&q=80",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ]
+}

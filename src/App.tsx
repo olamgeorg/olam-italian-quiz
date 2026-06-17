@@ -27,7 +27,12 @@ import {
   GraduationCap,
   BookOpenCheck,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Phone,
+  Mail,
+  Download,
+  Smartphone,
+  Laptop
 } from 'lucide-react';
 
 const STORAGE_STATS_KEY = 'olamgeorg_italian_quiz_stats';
@@ -74,6 +79,23 @@ export default function App() {
     incorrectIds: string[];
     mode: QuizMode | 'remedial';
   } | null>(null);
+
+  // PWA & Download state hooks
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showPwaPrompt, setShowPwaPrompt] = useState<boolean>(false);
+
+  // Setup PWA install handler listener
+  useEffect(() => {
+    const handleBeforePrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowPwaPrompt(true);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforePrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforePrompt);
+    };
+  }, []);
 
   // Load configuration and statistics from localStorage on boot
   useEffect(() => {
@@ -130,6 +152,172 @@ export default function App() {
     } catch (e) {
       console.warn('Could not save stats to localStorage', e);
     }
+  };
+
+  // Install Progressive Web App (PWA) Handler
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) {
+      alert("Der PWA-Installer ist im Browser noch nicht bereit oder die App ist bereits installiert. Tipp: Auf Mobilgeräten (z. B. iOS Safari) tippen Sie auf 'Teilen' -> 'Zum Home-Bildschirm hinzufügen'.");
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('User accepted PWA installation');
+      setShowPwaPrompt(false);
+      setDeferredPrompt(null);
+    }
+  };
+
+  // Standalone offline study kit compiler & downloader
+  const downloadOfflineStudyKit = () => {
+    const sortedQuestions = [...QUESTIONS];
+    let htmlContent = `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.5">
+  <title>Georg.edu • Italienisch Lernen A1-A2 Studienbegleiter</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #2d3748;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      background-color: #f7fafc;
+    }
+    h1 {
+      color: #0b1a30;
+      border-bottom: 2px solid #009246;
+      padding-bottom: 15px;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .meta-subtitle {
+      text-align: center;
+      color: #718096;
+      font-weight: bold;
+      margin-bottom: 30px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+    .badge-a1 { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+    .badge-a2 { background-color: #faf5ff; color: #6b46c1; border: 1px solid #e9d8fd; }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .question-title {
+      font-weight: 800;
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+      color: #1a202c;
+    }
+    .options-list {
+      margin-left: 0;
+      padding-left: 0;
+      list-style-type: none;
+    }
+    .option {
+      padding: 10px 15px;
+      border: 1px solid #edf2f7;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background-color: #fafdff;
+    }
+    .option.correct {
+      background-color: #f0fff4;
+      border-color: #c6f6d5;
+      color: #22543d;
+      font-weight: bold;
+    }
+    .explanation {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px dashed #e2e8f0;
+      font-size: 0.95rem;
+      color: #4a5568;
+      background-color: #fffaf0;
+      padding: 12px;
+      border-radius: 6px;
+    }
+    .header-info-box {
+      background: #edf2f7;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    @media print {
+      body { background-color: white; padding: 0; }
+      .card { box-shadow: none; page-break-inside: avoid; border-color: #cbd5e0; }
+      .header-info-box, .meta-subtitle { margin-bottom: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Georg.edu • Accordo di Integrazione</h1>
+  <div class="meta-subtitle">Italienisch-Integrationsstudienbegleiter (Niveau A1 & A2)</div>
+
+  <div class="header-info-box">
+    <strong>Offizielles Lern- und Begleitmaterial</strong> • Entwickelt im Studienzentrum von <strong>Olamgeorg</strong>.<br>
+    Support-Hotline: <strong>09134088925</strong> | E-Mail: <strong>olamgeorg9@gmail.com</strong><br>
+    <em>Offline-Kopie generiert am ${new Date().toLocaleDateString('de-DE')}</em>
+  </div>
+
+  <div style="margin-bottom: 20px; font-weight: bold;">Gesamtfragen im Paket: ${sortedQuestions.length}</div>
+`;
+
+    sortedQuestions.forEach((q, idx) => {
+      const levelBadge = q.level === 'A1' ? '<span class="badge badge-a1">Niveau A1</span>' : '<span class="badge badge-a2">Niveau A2</span>';
+      htmlContent += `  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+      <span style="font-weight: bold; font-family: monospace; color:#718096">Frage ${idx + 1} von ${sortedQuestions.length}</span>
+      <span style="margin-left: auto;">\${levelBadge} <span class="badge" style="background-color: #ededed; color:#4a4a4a; border: 1px solid #d3d3d3;">\${q.section}</span></span>
+    </div>
+    <div class="question-title">\${q.questionText}</div>
+    <div style="font-style: italic; color: #718096; margin-bottom: 15px; font-size: 0.95rem;">Übersetzung: \${q.translation || 'Deutschsprachiger Begleittext'}</div>
+    <div class="options-list">`;
+
+      q.options.forEach((opt, optIdx) => {
+        const isCorrect = optIdx === q.correctAnswerIndex;
+        htmlContent += `      <div class="option \${isCorrect ? 'correct' : ''}">
+        [\${optIdx === q.correctAnswerIndex ? '✓ Richtig' : ' '}] \${opt}
+      </div>`;
+      });
+
+      htmlContent += `    </div>
+    <div class="explanation">
+      <strong>💡 Erklärung / Grammatik:</strong> \${q.explanation}
+    </div>
+  </div>\n`;
+    });
+
+    htmlContent += `</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'georg_edu_it_studienbegleiter.html';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Theme handling
@@ -344,16 +532,19 @@ export default function App() {
         }`}
       >
         <div className="flex items-center gap-3">
+          {/* Italian Tricolore Logo Badge */}
           <div 
-            className={`w-12 h-12 rounded-xl p-0.5 flex items-center justify-center transition-all ${
+            className={`w-14 h-11 rounded-xl overflow-hidden flex transition-all relative shrink-0 ${
               isN
-                ? 'bg-[#FFD93D] border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
-                : 'bg-indigo-500 text-white'
+                ? 'border-4 border-[#4D3B3B] shadow-[2.5px_2.5px_0px_#4D3B3B]'
+                : 'border border-slate-200 shadow-sm'
             }`}
           >
-            <div className={`text-xl font-black ${isN ? 'text-[#4D3B3B]' : 'text-white'}`}>
-              IT
+            <div className="w-1/3 h-full bg-[#009246]" title="Verde" />
+            <div className="w-1/3 h-full bg-[#FAFAFA] flex items-center justify-center">
+              <span className="text-[11px] font-extrabold tracking-tighter text-[#4D3B3B] font-mono">IT</span>
             </div>
+            <div className="w-1/3 h-full bg-[#CE2B37]" title="Rosso" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -364,14 +555,14 @@ export default function App() {
                 className={`px-1.5 py-0.1 text-[9px] font-black rounded uppercase ${
                   isN
                     ? 'bg-[#E1F5FE] text-[#4D3B3B] border-2 border-[#4D3B3B]'
-                    : 'bg-sky-50 text-sky-700 border border-sky-200'
+                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                 }`}
               >
                 A1-A2 Syllabus
               </span>
             </div>
             <h1 className={`text-lg sm:text-2xl font-black tracking-tight flex items-center gap-2 ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>
-              Italienisch-Prüfungsportal
+              Italienisch-Integrationsportal
             </h1>
           </div>
         </div>
@@ -749,6 +940,79 @@ export default function App() {
               onSelectDesignStyle={handleSelectDesignStyle}
             />
 
+            {/* PWA & OFFLINE DOWNLOAD CENTER */}
+            <div 
+              className={`p-6 transition-all duration-300 space-y-6 ${
+                isN 
+                  ? 'bg-white border-4 border-[#4D3B3B] rounded-[24px] shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B]' 
+                  : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-md text-slate-800'
+              }`}
+            >
+              <div>
+                <span className={`text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest block ${isN ? 'text-[#FF6B6B]' : 'text-indigo-650'}`}>
+                  Offline-Nutzung & App-Installation
+                </span>
+                <h3 className="text-xl sm:text-3xl font-black flex items-center gap-2">
+                  📲 App-Zentrale (PWA & Offline Downloader)
+                </h3>
+                <p className={`text-xs sm:text-sm font-bold mt-1 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
+                  Nutzen Sie diese Anwendung wie eine native App! Vollständig offline-fähig für Zugreisen, Flüge oder ländliche Gebiete. Sie können die App auf Ihrem Smartphone installieren oder das vollständige Lernelement als eigenständige HTML-Datei herunterladen.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Option 1: PWA Native Installation */}
+                <div className={`p-4 rounded-2xl flex flex-col justify-between space-y-4 border-2 ${
+                  isN ? 'bg-[#E1F5FE] border-[#4D3B3B] shadow-[3.5px_3.5px_0px_#4D3B3B]' : 'bg-sky-50/50 border-sky-100'
+                }`}>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className={`w-5 h-5 ${isN ? 'text-[#4D3B3B]' : 'text-sky-600'}`} />
+                      <span className="font-extrabold text-sm sm:text-base uppercase tracking-wider font-mono">1. App auf Startbildschirm</span>
+                    </div>
+                    <p className="text-xs font-semibold leading-normal opacity-90">
+                      Fügt die Lern-App direkt Ihrem Homescreen hinzu (unterstützt iOS, Android, macOS & Windows).
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleInstallPWA}
+                    className={`w-full py-3 px-4 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex items-center justify-center gap-2 ${
+                      isN
+                        ? 'bg-[#FFD93D] text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:-translate-y-0.5 active:translate-y-0'
+                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-black'
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4" /> App jetzt installieren
+                  </button>
+                </div>
+
+                {/* Option 2: Standalone HTML Study Kit */}
+                <div className={`p-4 rounded-2xl flex flex-col justify-between space-y-4 border-2 ${
+                  isN ? 'bg-[#FFF8E1] border-[#4D3B3B] shadow-[3.5px_3.5px_0px_#4D3B3B]' : 'bg-amber-50/50 border-amber-100'
+                }`}>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Download className={`w-5 h-5 ${isN ? 'text-[#4D3B3B]' : 'text-amber-700'}`} />
+                      <span className="font-extrabold text-sm sm:text-base uppercase tracking-wider font-mono">2. Offline-Studienbegleiter</span>
+                    </div>
+                    <p className="text-xs font-semibold leading-normal opacity-90">
+                      Laden Sie ein interaktives PDF/HTML-Arbeitsblatt mit allen A1/A2-Fragen samt Erläuterungen für Ihr Handy oder Drucker herunter.
+                    </p>
+                  </div>
+                  <button
+                    onClick={downloadOfflineStudyKit}
+                    className={`w-full py-3 px-4 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex items-center justify-center gap-2 ${
+                      isN
+                        ? 'bg-[#FF9F43] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:-translate-y-0.5 active:translate-y-0'
+                        : 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm font-black'
+                    }`}
+                  >
+                    <Download className="w-4 h-4" /> Studienpaket herunterladen
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* THEMATIC SUMMARY OF Italian Syllabus Course info */}
             <div className="bg-white border-4 border-[#4D3B3B] rounded-[24px] p-6 shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B] space-y-4">
               <h3 className="text-lg sm:text-2xl font-black flex items-center gap-2">
@@ -777,6 +1041,78 @@ export default function App() {
                   <p className="font-black text-[#6C5CE7] uppercase text-sm">4. Bürgerkunde (Civiltà)</p>
                   <p className="text-[#4D3B3B] font-extrabold leading-normal">Nutzung von Codice Fiscale, Tessera Sanitaria, Steuerpflichten, Verfassungsrecht und Meldeämter.</p>
                 </div>
+              </div>
+            </div>
+
+            {/* GEORG.EDU SUPPORT & CONTACT SECTION */}
+            <div 
+              className={`p-6 sm:p-8 transition-all duration-300 ${
+                isN 
+                  ? 'bg-white border-4 border-[#4D3B3B] rounded-[24px] shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B]' 
+                  : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-md'
+              }`}
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <span className={`text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest block ${isN ? 'text-[#FF6B6B]' : 'text-indigo-650'}`}>
+                    Offizieller Support & Studien-Zentrum
+                  </span>
+                  <h3 className="text-xl sm:text-3xl font-black">
+                    Georg.edu Kontaktcenter
+                  </h3>
+                  <p className={`text-xs sm:text-sm font-bold max-w-xl ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
+                    Haben Sie Fragen zum Integrationsabkommen, zu den Sprachniveaus A1 oder A2 oder sonstige Anfragen? 
+                    Unser Support betreut Sie gerne telefonisch oder per E-Mail.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
+                  {/* Telefonische Unterstützung */}
+                  <a 
+                    href="tel:09134088925"
+                    className={`p-4 rounded-xl flex items-center gap-3 transition-all cursor-pointer select-none border-2 hover:-translate-y-0.5 active:translate-y-0 ${
+                      isN
+                        ? 'bg-[#E1F5FE] border-[#4D3B3B] text-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
+                        : 'bg-indigo-50/50 border border-indigo-100 hover:bg-indigo-50 text-indigo-700 font-bold'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${isN ? 'bg-white border-2 border-[#4D3B3B]' : 'bg-indigo-100'}`}>
+                      <Phone className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-mono font-black text-slate-500 block">Kontakt-Tel.</span>
+                      <span className="text-xs sm:text-sm font-extrabold tracking-wide">09134088925</span>
+                    </div>
+                  </a>
+
+                  {/* E-Mail Unterstützung */}
+                  <a 
+                    href="mailto:olamgeorg9@gmail.com"
+                    className={`p-4 rounded-xl flex items-center gap-3 transition-all cursor-pointer select-none border-2 hover:-translate-y-0.5 active:translate-y-0 ${
+                      isN
+                        ? 'bg-[#FFF8E1] border-[#4D3B3B] text-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
+                        : 'bg-amber-50/50 border border-amber-100 hover:bg-amber-50 text-amber-900 font-bold'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${isN ? 'bg-white border-2 border-[#4D3B3B]' : 'bg-amber-100'}`}>
+                      <Mail className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-mono font-black text-slate-500 block">E-Mail Kontakt</span>
+                      <span className="text-xs sm:text-sm font-extrabold tracking-wide">olamgeorg9@gmail.com</span>
+                    </div>
+                  </a>
+                </div>
+              </div>
+
+              {/* Developer Attribution Card */}
+              <div 
+                className={`mt-6 pt-4 border-t-2 text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono font-black ${
+                  isN ? 'border-[#4D3B3B]/10 text-[#4D3B3B]/70' : 'border-slate-100 text-slate-450'
+                }`}
+              >
+                <span>Syllabus-Akkreditierung: Georg.edu Nationalportal</span>
+                <span>Entwickelt von: <strong className={`font-sans font-black ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>Olamgeorg</strong></span>
               </div>
             </div>
           </div>
@@ -1046,10 +1382,10 @@ export default function App() {
         }`}
       >
         <p className="text-xs leading-normal font-sans">
-          Accordo di Integrazione • Italienisches Einwanderungs- und Integrationsförderungsportal
+          Accordo di Integrazione • Italienisches Schulungsprogramm der <strong className={`${isN ? '' : 'text-indigo-600'}`}>Georg.edu</strong>
         </p>
-        <p className="text-[10px] font-mono tracking-wide uppercase">
-          Kuratiert und implementiert von <span className={`font-sans font-black ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>OlamGeorg</span> • Stand Juni 2026
+        <p className="text-xs font-mono tracking-wide">
+          Entwickelt und gepflegt von <span className="font-sans font-black text-rose-500">Olamgeorg</span> • Support-Tel: <a href="tel:09134088925" className="hover:underline font-bold">09134088925</a> | E-Mail: <a href="mailto:olamgeorg9@gmail.com" className="hover:underline font-bold">olamgeorg9@gmail.com</a>
         </p>
       </footer>
     </div>

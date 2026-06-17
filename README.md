@@ -1,20 +1,74 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Georg.edu Italienisch A1-A2 Integrationsprüfung-Portal 🇮🇹
 
-# Run and deploy your AI Studio app
+Ein interaktives, hocheffizientes Trainings- und Prüfungsportal für das offizielle italienische **A1- und A2-Integrationscurriculum (Accordo di Integrazione)**. Entwickelt im Auftrag der **Georg.edu** zur gezielten Förderung und Vorbereitung auf die bürgerlichen und sprachlichen Integrationsprüfungen.
 
-This contains everything you need to run your app locally.
+Dieses Portal ist voll PWA-fähig (Progressive Web App), läuft offline-first und bietet haptische Ton-Feedbacks, personalisierte Themen sowie einen hochentwickelten intelligenten Schwäche-Trainer.
 
-View your app in AI Studio: https://ai.studio/apps/b6dce14d-8741-44e7-a3db-d9f9cb56d59b
+---
 
-## Run Locally
+## 🌟 Key Features
 
-**Prerequisites:**  Node.js
+*   **📚 Getrennte Sprachniveaus (A1 & A2)**: Filtern Sie Lernbereiche nach einfachem Grundwortschatz (A1) oder fortgeschritteneren Alltagssituationen und Bürgerkunde zur Integration (A2).
+*   **⏰ Offizielle Prüfungssimulation**: Simulieren Sie die echte Prüfung mit 20 ausgewogenen Fragen, abgedecktem Syllabus-Mix und 15-Minuten-Zeitlimit.
+*   **🎯 Gezieltes Fehlertraining**: Jede falsch beantwortete Frage wird automatisch gelistet und lässt sich in personalisierten Drills separat üben, bis sie vollständig beherrscht wird.
+*   **📱 PWA-Ready (Offline-Unterstützung)**: Voll funktionsfähig auf Handys und Tablets ohne ständige Internetverbindung dank modernem Service Worker.
+*   **🎨 Dynamic Neobrutalist & Modern Styles**: Flexible visuelle Interfaces inkl. Soundsteuerung und mehreren sorgfältig abgestimmten Farbpaletten.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🛠️ Technische Spezifikation & Installation
+
+Dieses Webprojekt basiert auf modernsten, leichtgewichtigen Webtechnologien:
+*   **Framework**: [React 19](https://react.dev/) mit [TypeScript](https://www.typescriptlang.org/)
+*   **Packer**: [Vite 6](https://vitejs.dev/)
+*   **Stilmittel**: [Tailwind CSS v4](https://tailwindcss.com/)
+*   **Animationen**: [Motion](https://motion.dev/)
+*   **Icons**: [Lucide-React](https://lucide.dev/)
+
+### Projekt lokal starten
+
+1.  **Repository klonen**:
+    ```bash
+    git clone https://github.com/OlamGeorg/georg-edu-italian-quiz.git
+    cd georg-edu-italian-quiz
+    ```
+
+2.  **Abhängigkeiten installieren**:
+    ```bash
+    npm install
+    ```
+
+3.  **Entwicklerserver starten**:
+    ```bash
+    npm run dev
+    ```
+    Der Server läuft standardmäßig auf `http://localhost:3000`.
+
+4.  **Für die Produktion bauen (Build)**:
+    ```bash
+    npm run build
+    ```
+    Erzeugt optimierte statische Dateien im Ordner `dist/`, inklusive des registrierten Service Workers für den PWA-Betrieb.
+
+---
+
+## 📱 Progressive Web App (PWA)
+
+Diese Anwendung implementiert die vollständige PWA-Spezifikation:
+*   **Weboberflächen-Manifest**: `/public/manifest.json` regelt Startverhalten und Geräterahmenfarben.
+*   **Service Worker**: `/public/sw.js` ermöglicht das Laden des Portals über lokale Caches für blitzschnellen Offlinezugriff.
+
+---
+
+## 📞 Kontakt & Support
+
+Das Portal wird direkt betreut und gepflegt durch das Studien-Zentrum der **Georg.edu**:
+
+*   **Entwickler & Inhaber**: Olamgeorg
+*   **Telefonischer Support / Hotline**: [09134088925](tel:09134088925)
+*   **E-Mail-Anfragen**: [olamgeorg9@gmail.com](mailto:olamgeorg9@gmail.com)
+*   **Webseite**: [Georg.edu Portal](https://github.com/OlamGeorg)
+
+---
+
+*Lizenzierte Nutzung im Rahmen des Integrationsabkommens (Accordo di Integrazione).*
