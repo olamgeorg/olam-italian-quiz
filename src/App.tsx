@@ -532,19 +532,35 @@ export default function App() {
         }`}
       >
         <div className="flex items-center gap-3">
-          {/* Italian Tricolore Logo Badge */}
+          {/* Italian Republic Official-Style integration emblem */}
           <div 
-            className={`w-14 h-11 rounded-xl overflow-hidden flex transition-all relative shrink-0 ${
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all relative shrink-0 border-2 overflow-hidden ${
               isN
-                ? 'border-4 border-[#4D3B3B] shadow-[2.5px_2.5px_0px_#4D3B3B]'
-                : 'border border-slate-200 shadow-sm'
+                ? 'border-[#4D3B3B] bg-white shadow-[3px_3px_0px_#4D3B3B]'
+                : 'border-slate-200 bg-white shadow-sm'
             }`}
           >
-            <div className="w-1/3 h-full bg-[#009246]" title="Verde" />
-            <div className="w-1/3 h-full bg-[#FAFAFA] flex items-center justify-center">
-              <span className="text-[11px] font-extrabold tracking-tighter text-[#4D3B3B] font-mono">IT</span>
-            </div>
-            <div className="w-1/3 h-full bg-[#CE2B37]" title="Rosso" />
+            {/* Elegant SVG Italian integration badge with Italian flags and gold laurel */}
+            <svg viewBox="0 0 100 100" className="w-12 h-12 relative z-10">
+              {/* Background Italian Flag Tricolor Stripes */}
+              <rect x="0" y="0" width="34" height="100" fill="#009246" />
+              <rect x="34" y="0" width="32" height="100" fill="#FAFAFA" />
+              <rect x="66" y="0" width="34" height="100" fill="#CE2B37" />
+              
+              {/* Overlay White/Gold Circle for legibility */}
+              <circle cx="50" cy="50" r="32" fill="#FFFFFF" stroke="#FFC107" strokeWidth="3" />
+              
+              {/* Laurel Wreath */}
+              <path d="M 32,58 C 22,50 20,34 32,22 C 32,27 26,38 32,52" fill="#FFA000" opacity="0.9" />
+              <path d="M 68,58 C 78,50 80,34 68,22 C 68,27 74,38 68,52" fill="#FFA000" opacity="0.9" />
+              
+              {/* Monogram IT / Course insignia */}
+              <text x="50" y="58" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="24" fill="#1A202C" textAnchor="middle" letterSpacing="-1">IT</text>
+              <text x="50" y="73" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="11" fill="#009246" textAnchor="middle" letterSpacing="0.5">A1•A2</text>
+            </svg>
+            
+            {/* Minimal golden thread outline */}
+            <div className="absolute inset-0.5 border border-amber-300 rounded-xl pointer-events-none opacity-40" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -940,7 +956,7 @@ export default function App() {
               onSelectDesignStyle={handleSelectDesignStyle}
             />
 
-            {/* PWA & OFFLINE DOWNLOAD CENTER */}
+            {/* PWA INSTALLATION CENTER */}
             <div 
               className={`p-6 transition-all duration-300 space-y-6 ${
                 isN 
@@ -948,66 +964,29 @@ export default function App() {
                   : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-md text-slate-800'
               }`}
             >
-              <div>
-                <span className={`text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest block ${isN ? 'text-[#FF6B6B]' : 'text-indigo-650'}`}>
-                  Offline-Nutzung & App-Installation
-                </span>
-                <h3 className="text-xl sm:text-3xl font-black flex items-center gap-2">
-                  📲 App-Zentrale (PWA & Offline Downloader)
-                </h3>
-                <p className={`text-xs sm:text-sm font-bold mt-1 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
-                  Nutzen Sie diese Anwendung wie eine native App! Vollständig offline-fähig für Zugreisen, Flüge oder ländliche Gebiete. Sie können die App auf Ihrem Smartphone installieren oder das vollständige Lernelement als eigenständige HTML-Datei herunterladen.
-                </p>
-              </div>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1.5 flex-1">
+                  <span className={`text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest block ${isN ? 'text-[#FF6B6B]' : 'text-indigo-650'}`}>
+                    App-Installation (PWA)
+                  </span>
+                  <h3 className="text-xl sm:text-3xl font-black flex items-center gap-2">
+                    📲 App auf Startbildschirm installieren
+                  </h3>
+                  <p className={`text-xs sm:text-sm font-bold mt-1 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
+                    Nutzen Sie diese Anwendung wie eine native App! Vollständig offline-fähig für optimales Lernen auf Zugreisen, Flügen oder ländlichen Gebieten auf iOS, Android, macOS & Windows.
+                  </p>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Option 1: PWA Native Installation */}
-                <div className={`p-4 rounded-2xl flex flex-col justify-between space-y-4 border-2 ${
-                  isN ? 'bg-[#E1F5FE] border-[#4D3B3B] shadow-[3.5px_3.5px_0px_#4D3B3B]' : 'bg-sky-50/50 border-sky-100'
-                }`}>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Smartphone className={`w-5 h-5 ${isN ? 'text-[#4D3B3B]' : 'text-sky-600'}`} />
-                      <span className="font-extrabold text-sm sm:text-base uppercase tracking-wider font-mono">1. App auf Startbildschirm</span>
-                    </div>
-                    <p className="text-xs font-semibold leading-normal opacity-90">
-                      Fügt die Lern-App direkt Ihrem Homescreen hinzu (unterstützt iOS, Android, macOS & Windows).
-                    </p>
-                  </div>
+                <div className="shrink-0 w-full md:w-auto">
                   <button
                     onClick={handleInstallPWA}
-                    className={`w-full py-3 px-4 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex items-center justify-center gap-2 ${
+                    className={`w-full md:w-auto py-3.5 px-6 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex items-center justify-center gap-2 ${
                       isN
                         ? 'bg-[#FFD93D] text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:-translate-y-0.5 active:translate-y-0'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-black'
+                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/10 font-bold'
                     }`}
                   >
                     <Smartphone className="w-4 h-4" /> App jetzt installieren
-                  </button>
-                </div>
-
-                {/* Option 2: Standalone HTML Study Kit */}
-                <div className={`p-4 rounded-2xl flex flex-col justify-between space-y-4 border-2 ${
-                  isN ? 'bg-[#FFF8E1] border-[#4D3B3B] shadow-[3.5px_3.5px_0px_#4D3B3B]' : 'bg-amber-50/50 border-amber-100'
-                }`}>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Download className={`w-5 h-5 ${isN ? 'text-[#4D3B3B]' : 'text-amber-700'}`} />
-                      <span className="font-extrabold text-sm sm:text-base uppercase tracking-wider font-mono">2. Offline-Studienbegleiter</span>
-                    </div>
-                    <p className="text-xs font-semibold leading-normal opacity-90">
-                      Laden Sie ein interaktives PDF/HTML-Arbeitsblatt mit allen A1/A2-Fragen samt Erläuterungen für Ihr Handy oder Drucker herunter.
-                    </p>
-                  </div>
-                  <button
-                    onClick={downloadOfflineStudyKit}
-                    className={`w-full py-3 px-4 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex items-center justify-center gap-2 ${
-                      isN
-                        ? 'bg-[#FF9F43] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:-translate-y-0.5 active:translate-y-0'
-                        : 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm font-black'
-                    }`}
-                  >
-                    <Download className="w-4 h-4" /> Studienpaket herunterladen
                   </button>
                 </div>
               </div>
