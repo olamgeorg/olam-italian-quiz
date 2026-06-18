@@ -44,16 +44,14 @@ app.post("/api/translate", async (req, res) => {
     // Replace the blanks to give Gemini complete context
     const filledSentence = question.replace("___", `${correctAnswer || ""}`);
 
-    const prompt = `Du bist ein leidenschaftlicher, geduldiger Italienischlehrer für deutschsprachige Senioren (ältere Menschen ab 65 Jahren).
-Analysiere diesen Lücken-Satz, bei dem die Lücke bereits korrekt gefüllt wurde:
+    const prompt = `Du bist ein hochpräziser Übersetzer. Übersetze diesen italienischen Satz, bei dem die Lücke bereits korrekt ausgefüllt wurde, direkt, verständlich und elegant ins Deutsche ohne zusätzliche Grammatikelemente oder lange Kommentare. Mach die Übersetzung kurz, natürlich und absolut präzise.
+
 Kompletter italienischer Satz: "${filledSentence}"
 
-Ließ den Satz aufmerksam. Gib nun eine präzise, leicht verständliche deutsche Übersetzung und einen kurzen, liebevollen Lerntipp speziell für Senioren auf Deutsch aus (der z.B. Eselsbrücken, Ähnlichkeiten zum Deutschen oder französische/lateinische Brücken erklärt). Benutze verständliche Worte ohne grammatikalisches Fachchinesisch.
-
-Liefere Deine Antwort ausschließlich als gültiges JSON-Objekt im folgenden Format:
+Liefer Deine Antwort ausschließlich als gültiges JSON-Objekt im folgenden Format:
 {
-  "translation": "Genaue deutsche Übersetzung des kompletten italienischen Satzes",
-  "tip": "Ein prägnanter, mutmachender Grammatik- oder Eselsbrücken-Tipp für ältere Lerner (max. 2 Sätze)"
+  "translation": "Die genaue deutsche Übersetzung des Satzes",
+  "tip": ""
 }`;
 
     const response = await ai.models.generateContent({

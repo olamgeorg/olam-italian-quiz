@@ -21,7 +21,9 @@ import {
   Settings,
   HelpCircle,
   Flame,
-  CheckSquare
+  CheckSquare,
+  Sliders,
+  Lightbulb
 } from 'lucide-react';
 import { Question, QuizMode } from './types';
 import { playSound } from './audio';
@@ -262,6 +264,7 @@ export default function App() {
   const [selectedLevel, setSelectedLevel] = useState<'A1' | 'A2'>('A1');
   const [quizMode, setQuizMode] = useState<QuizMode>('practice');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
 
   // Senior Accessibility State Attributes
   const [textSize, setTextSize] = useState<'normal' | 'groß' | 'extra-groß'>('groß'); // Default to 'groß' (large text) for old German users
@@ -342,7 +345,23 @@ export default function App() {
           ...q,
           question: cleanQuestionText(q.question)
         }));
-        setAllQuestions(cleanedData);
+
+        // Deduplicate compiled questions on exact matching text and level
+        const uniqueQuestions: Question[] = [];
+        const seenQuestions = new Set<string>();
+
+        for (const q of cleanedData) {
+          const key = `${q.level}:${q.question.trim().toLowerCase()}`;
+          if (!seenQuestions.has(key)) {
+            seenQuestions.add(key);
+            uniqueQuestions.push(q);
+          }
+        }
+
+        // Shuffle the loaded database initially so each run feels completely randomized
+        const shuffledList = shuffleFisherYatesGeneric<Question>(uniqueQuestions);
+
+        setAllQuestions(shuffledList);
         setScreen('level_select');
       })
       .catch((err) => {
@@ -366,11 +385,28 @@ export default function App() {
 
   // Fisher-Yates mapping configuration so option buttons are dynamically scrambled
   const mapAndShuffleOptions = (q: Question) => {
-    const mapped = q.options.map((opt, idx) => ({
-      text: opt,
-      isCorrect: idx === q.correctIndex
-    }));
-    return shuffleFisherYatesGeneric(mapped);
+    const correctOption = {
+      text: q.options[q.correctIndex],
+      isCorrect: true
+    };
+    
+    const wrongOptions = q.options
+      .map((opt, idx) => ({ text: opt, isCorrect: idx === q.correctIndex }))
+      .filter(o => !o.isCorrect);
+
+    // Dynamic shuffle of wrong answers
+    const shuffledWrong = shuffleFisherYatesGeneric(wrongOptions);
+
+    let finalOptions = [correctOption];
+    if (difficulty === 'easy') {
+      finalOptions.push(shuffledWrong[0]);
+    } else if (difficulty === 'normal') {
+      finalOptions.push(shuffledWrong[0], shuffledWrong[1]);
+    } else {
+      finalOptions = finalOptions.concat(shuffledWrong);
+    }
+
+    return shuffleFisherYatesGeneric(finalOptions);
   };
 
   // Speaks complete Italian sentence using Browser SpeechSynthesis
@@ -394,51 +430,7 @@ export default function App() {
 
   // Fetch AI Translation & Grammar Lerntipp on background from full-stack Gemini service
   const retrieveAiTranslation = async (q: Question) => {
-    setAiTranslation('');
-    setAiTip('');
-    setLoadingAi(true);
-
-    const correctAnswerText = q.options[q.correctIndex];
-
-    try {
-      const response = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: q.question,
-          correctAnswer: correctAnswerText
-        })
-      });
-
-      if (response.ok) {
-        const bodyValue = await response.json();
-        if (bodyValue && bodyValue.translation) {
-          setAiTranslation(bodyValue.translation);
-          setAiTip(bodyValue.tip || '');
-          setLoadingAi(false);
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn("Backend Gemini API translation failed, activating automatic fallback:", e);
-    }
-
-    // Dynamic fallback offline translator
-    let staticGermanTranslation = q.explanation;
-    // Extract a translation heuristic if enclosed in parenthesis or quotes
-    const match = q.explanation.match(/\((.*?)\)/);
-    if (match && match[1]) {
-      staticGermanTranslation = match[1];
-    }
-
-    // Create a beautiful localized fallback
-    const completeSentence = q.question.replace("___", correctAnswerText);
-
-    setTimeout(() => {
-      setAiTranslation(`[Deutsche Übersetzung] „${completeSentence}“`);
-      setAiTip(`Deuter-Tipp: Das korrekte Wort lautet „${correctAnswerText}“. Erläuterung: ${q.explanation}`);
-      setLoadingAi(false);
-    }, 400);
+    // No-op: Removed Gemini API translation loader to honor offline-first local Erläuterung
   };
 
   // Fetch list of matching questions based on Level + Category filter without duplicates
@@ -657,13 +649,19 @@ export default function App() {
   useEffect(() => {
     if (quizMode !== 'exam' || screen !== 'quiz') return;
 
-    const initialLimit = selectedLevel === 'A1' ? 60 : 45;
-    setTimeLeft(initialLimit);
+    let baseLimit = selectedLevel === 'A1' ? 60 : 45;
+    if (difficulty === 'easy') {
+      baseLimit = Math.round(baseLimit * 1.5);
+    } else if (difficulty === 'hard') {
+      baseLimit = Math.round(baseLimit * 0.5);
+    }
+
+    setTimeLeft(baseLimit);
     startTimeRef.current = Date.now();
 
     const interval = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      const remaining = Math.max(0, initialLimit - elapsedSeconds);
+      const remaining = Math.max(0, baseLimit - elapsedSeconds);
       setTimeLeft(remaining);
 
       if (remaining <= 0) {
@@ -675,7 +673,7 @@ export default function App() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [examIndex, screen, quizMode, selectedLevel]);
+  }, [examIndex, screen, quizMode, selectedLevel, difficulty]);
 
   // Back home behavior
   const handleGoHome = () => {
@@ -827,6 +825,35 @@ export default function App() {
                       }`}
                     >
                       {label as string}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic Difficulty Level Buttons */}
+              <div className="space-y-1.5 col-span-1 md:col-span-2 pt-1 animate-fadeIn">
+                <span className="text-xs font-bold text-emerald-900 block flex items-center gap-1">
+                  <Sliders className="w-3.5 h-3.5" /> Schwierigkeit & Fragetiefe:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { val: 'easy', text: 'Einfach 🟢' },
+                    { val: 'normal', text: 'Mittel 🟡' },
+                    { val: 'hard', text: 'Schwer 🔴' }
+                  ].map((lvl) => (
+                    <button
+                      key={lvl.val}
+                      onClick={() => {
+                        playSound('click');
+                        setDifficulty(lvl.val as any);
+                      }}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                        difficulty === lvl.val
+                          ? 'bg-emerald-700 border-emerald-700 text-white shadow-sm'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      {lvl.text}
                     </button>
                   ))}
                 </div>
@@ -1059,6 +1086,41 @@ export default function App() {
               </p>
             </div>
 
+            {/* HIGHLY INTERACTIVE VIBRANT DIFFICULTY SELECTOR CARD */}
+            <div className="bg-emerald-50/40 border-2 border-emerald-500/20 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">Schwierigkeitsgrad wählen</h3>
+              </div>
+              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                Legt fest, wie viele Antwortmöglichkeiten eingeblendet werden und wie viel Zeit Sie im Examen haben.
+              </p>
+              
+              <div className="grid grid-cols-3 gap-2.5 pt-1">
+                {[
+                  { key: 'easy', label: 'Einfach 🟢', desc: '2 Antworten • Extra Zeit' },
+                  { key: 'normal', label: 'Mittel 🟡', desc: '3 Antworten • Standard' },
+                  { key: 'hard', label: 'Schwer 🔴', desc: '4 Antworten • Turbo' }
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => {
+                      playSound('click');
+                      setDifficulty(item.key as any);
+                    }}
+                    className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                      difficulty === item.key
+                        ? 'bg-emerald-600 border-emerald-700 text-white shadow-md font-black scale-[1.03]'
+                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800 hover:border-emerald-600/50'
+                    }`}
+                  >
+                    <span className="text-xs font-black">{item.label}</span>
+                    <span className={`text-[9px] font-bold ${difficulty === item.key ? 'text-emerald-100' : 'text-slate-500'}`}>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-4">
               {/* Practice Mode */}
               <button
@@ -1189,7 +1251,7 @@ export default function App() {
                 </div>
 
                 <div className="py-1">
-                  <p className="font-extrabold text-slate-900 leading-snug tracking-normal text-base md:text-lg">
+                  <p className="font-black text-slate-950 leading-relaxed text-xs sm:text-sm md:text-base">
                     {currentQuestion.question}
                   </p>
                 </div>
@@ -1248,46 +1310,18 @@ export default function App() {
                 })}
               </div>
 
-              {/* INTERACTIVE FULL-STACK GENERATED AI TRANSLATION BOX (Shown under question in practice) */}
-              {quizMode === 'practice' && (
-                <div className="pt-2 border-t border-slate-200/60 space-y-3">
-                  <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-emerald-700 fill-emerald-100" />
-                      <span>🤖 Intelligente KI-Übersetzung (Gemini):</span>
-                    </p>
-                    
-                    {loadingAi ? (
-                      <div className="space-y-2 py-1">
-                        <div className="h-4 bg-emerald-200/50 rounded animate-pulse w-3/4"></div>
-                        <div className="h-3 bg-emerald-200/35 rounded animate-pulse w-1/2"></div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <p className={`font-extrabold text-emerald-950 leading-relaxed ${getBodyTextSizeClass()}`}>
-                          {aiTranslation}
-                        </p>
-                        {aiTip && (
-                          <p className={`text-slate-600 italic bg-white/70 px-2.5 py-1.5 rounded-lg border border-emerald-100/40 ${getSubtleTextSizeClass()}`}>
-                            <strong className="text-emerald-800 font-bold not-italic">Didaktik-Tipp:</strong> {aiTip}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* EXPANDED OFFLINE EXPLANATION */}
+              {/* EXPANDED OFFLINE EXPLANATION - HIGHLY VIBRANT & SMART */}
               {quizMode === 'practice' && answered && (
-                <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1 animate-fadeIn">
-                  <p className="text-xs font-black text-amber-900 uppercase tracking-widest flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4 text-amber-800" />
-                    <span>Lokal-Erläuterung:</span>
-                  </p>
-                  <p className={`text-slate-700 leading-relaxed font-bold ${getSubtleTextSizeClass()}`}>
-                    {currentQuestion.explanation}
-                  </p>
+                <div className="pt-2 border-t border-slate-200/40">
+                  <div className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-2 border-emerald-500/20 rounded-2xl space-y-2 animate-fadeIn shadow-xs">
+                    <p className="text-xs font-black text-emerald-950 uppercase tracking-widest flex items-center gap-1.5">
+                      <Lightbulb className="w-4 h-4 text-emerald-700 fill-emerald-100" />
+                      <span>didaktische Erklärung & Übersetzung:</span>
+                    </p>
+                    <p className={`text-slate-800 leading-relaxed font-bold ${getSubtleTextSizeClass()}`}>
+                      {currentQuestion.explanation}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -1475,15 +1509,19 @@ export default function App() {
       <footer className="text-center py-4 mt-8 border-t-2 border-emerald-500 text-slate-500 space-y-1.5 bg-emerald-50/40 rounded-xl p-4">
         <p className="text-sm font-semibold hover:text-slate-700 transition-colors">
           Developed by:{' '}
+          <span className="font-black text-[#009246] bg-emerald-50 px-2.5 py-1.5 rounded-md border border-emerald-200">
+            OlamGeorg
+          </span>{' '}
+          • App-Kanal:{' '}
           <a
-            href="https://github.com/OlamGeorg"
+            href="https://ais-pre-ee646qm7pzz7xdsgd7ogod-535059019595.europe-west1.run.app"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#009246] hover:underline font-black bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200"
+            className="text-emerald-700 hover:underline font-black bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200"
           >
-            OlamGeorg
+            Italiano Lernportal (Live)
           </a>{' '}
-          • Email:{' '}
+          • Support:{' '}
           <a
             href="mailto:olamgeorg9@gmail.com"
             className="text-[#ce2b37] hover:underline inline-flex items-center gap-1 font-black bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200"
