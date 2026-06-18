@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type SectionId = 'vocabulary' | 'grammar' | 'dialogues' | 'culture';
+export type SectionId = 'Verben' | 'Nomen' | 'Präpositionen' | 'Artikel';
 
 export interface SectionInfo {
   id: SectionId;
@@ -15,13 +15,11 @@ export interface SectionInfo {
 export interface Question {
   id: string;
   section: SectionId;
-  level: 'A1' | 'A2';
-  questionText: string; // The phrase to translate or answer
-  questionContext?: string; // Optional context (Italian dialogue or reading text)
-  options: string[];
-  correctAnswerIndex: number;
-  explanation: string; // Explanation in German why it's correct
-  translation?: string; // German translation of the Italian question
+  thema: string; // 'Presente' | 'Passato Prossimo' | 'Imperfetto' | 'Futuro' | 'Condizionale' | etc.
+  frage_de: string;
+  options_de: string[];
+  richtige_antwort: string;
+  erklaerung_de: string;
 }
 
 export type QuizMode = 'practice' | 'exam';

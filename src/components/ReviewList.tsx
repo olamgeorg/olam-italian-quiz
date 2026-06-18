@@ -98,7 +98,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
       {/* List of Incorrect questions */}
       <div className="space-y-6">
         {incorrectQuestions.map((q, index) => {
-          const correctOption = q.options[q.correctAnswerIndex];
+          const correctOption = q.richtige_antwort;
 
           return (
             <div
@@ -133,7 +133,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
                         : 'bg-slate-100 text-slate-600 font-semibold'
                     }`}
                   >
-                    {q.section === 'vocabulary' ? 'Wortschatz' : q.section === 'grammar' ? 'Grammatik' : q.section === 'dialogues' ? 'Dialoge' : 'Kultur'}
+                    {q.section}
                   </span>
                   
                   <span 
@@ -143,7 +143,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
                         : 'bg-amber-100 text-amber-700 font-semibold'
                     }`}
                   >
-                    {q.level}
+                    {q.thema}
                   </span>
                 </div>
 
@@ -162,35 +162,17 @@ export const ReviewList: React.FC<ReviewListProps> = ({
                 </button>
               </div>
 
-              {/* Question Text in Italian */}
+              {/* Question Text in German */}
               <div className="space-y-1">
-                {q.questionContext && (
-                  <p 
-                    className={`p-3 rounded-xl italic whitespace-pre-line text-sm font-semibold ${
-                      isN
-                        ? 'text-[#4D3B3B]/85 bg-[#FFF8E1] border-2 border-[#4D3B3B]'
-                        : 'text-slate-700 bg-slate-50 border border-slate-100'
-                    }`}
-                  >
-                    {q.questionContext}
-                  </p>
-                )}
-                
                 <h4 className={`text-lg sm:text-2xl font-black tracking-tight ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>
-                  {q.questionText}
+                  {q.frage_de}
                 </h4>
-                
-                {q.translation && (
-                  <p className={`text-xs sm:text-sm font-bold italic ${isN ? 'text-[#FF6B6B]' : 'text-rose-500'}`}>
-                    Übersetzung: "{q.translation}"
-                  </p>
-                )}
               </div>
 
               {/* Answers and Explanations */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {q.options.map((opt, oIndex) => {
-                  const isCorrect = oIndex === q.correctAnswerIndex;
+                {q.options_de.map((opt, oIndex) => {
+                  const isCorrect = opt === q.richtige_antwort;
                   return (
                     <div
                       key={opt}
@@ -235,7 +217,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
                   Erklärung auf Deutsch:
                 </span>
                 <p className={`text-sm sm:text-base leading-relaxed font-black ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>
-                  {q.explanation}
+                  {q.erklaerung_de}
                 </p>
               </div>
             </div>

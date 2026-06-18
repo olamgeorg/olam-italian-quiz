@@ -1,6 +1,6 @@
 {
-  "name": "Georg.edu Italienisch Integrationskurs",
-  "description": "Italienisches A1-A2 Integrationscurriculum-Trainingsportal der Georg.edu. Vollständig PWA-fähig für Offline-Übungen, mit integrierten Prifungsimulatoren und Schwäche-Trainer.",
+  "name": "App Italiano",
+  "description": "Italienisches A1-A2 Integrationscurriculum-Trainingsportal. Vollständig PWA-fähig für Offline-Übungen, mit integrierten Prüfungssimulatoren und Schwäche-Trainer.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

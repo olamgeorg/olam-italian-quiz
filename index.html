@@ -6,12 +6,12 @@
     <meta name="theme-color" content="#009246" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Georg.edu" />
+    <meta name="apple-mobile-web-app-title" content="Italiano" />
     
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1621600411688-4be93cd68504?w=192&h=192&fit=crop&q=80" />
     
-    <title>Georg.edu • Italienisch Lernen A1/A2 Integrationskurs</title>
+    <title>Italiano • Italienisch Lernen A1/A2 Integrationskurs</title>
   </head>
   <body>
     <div id="root"></div>
@@ -20,7 +20,7 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('Georg.edu PWA Service Worker erfolgreich registriert:', reg.scope))
+            .then(reg => console.log('Italiano PWA Service Worker erfolgreich registriert:', reg.scope))
             .catch(err => console.error('PWA Service Worker fehlgeschlagen:', err));
         });
       }

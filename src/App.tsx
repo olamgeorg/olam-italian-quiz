@@ -46,10 +46,10 @@ const defaultStats: UserStats = {
   totalQuestionsAnswered: 0,
   correctAnswersCount: 0,
   masteryBySection: {
-    vocabulary: { answered: 0, correct: 0 },
-    grammar: { answered: 0, correct: 0 },
-    dialogues: { answered: 0, correct: 0 },
-    culture: { answered: 0, correct: 0 }
+    Verben: { answered: 0, correct: 0 },
+    Nomen: { answered: 0, correct: 0 },
+    Präpositionen: { answered: 0, correct: 0 },
+    Artikel: { answered: 0, correct: 0 }
   },
   incorrectQuestionIds: []
 };
@@ -177,7 +177,7 @@ export default function App() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.5">
-  <title>Georg.edu • Italienisch Lernen A1-A2 Studienbegleiter</title>
+  <title>App Italiano • Italienisch Lernen A1-A2 Studienbegleiter</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -269,11 +269,11 @@ export default function App() {
   </style>
 </head>
 <body>
-  <h1>Georg.edu • Accordo di Integrazione</h1>
+  <h1>App Italiano • Accordo di Integrazione</h1>
   <div class="meta-subtitle">Italienisch-Integrationsstudienbegleiter (Niveau A1 & A2)</div>
 
   <div class="header-info-box">
-    <strong>Offizielles Lern- und Begleitmaterial</strong> • Entwickelt im Studienzentrum von <strong>Olamgeorg</strong>.<br>
+    <strong>Offizielles Lern- und Begleitmaterial</strong> aus der <strong>App Italiano</strong>-Lernplattform.<br>
     Support-Hotline: <strong>09134088925</strong> | E-Mail: <strong>olamgeorg9@gmail.com</strong><br>
     <em>Offline-Kopie generiert am ${new Date().toLocaleDateString('de-DE')}</em>
   </div>
@@ -282,26 +282,25 @@ export default function App() {
 `;
 
     sortedQuestions.forEach((q, idx) => {
-      const levelBadge = q.level === 'A1' ? '<span class="badge badge-a1">Niveau A1</span>' : '<span class="badge badge-a2">Niveau A2</span>';
+      const levelBadge = `<span class="badge badge-a1">${q.thema}</span>`;
       htmlContent += `  <div class="card">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
       <span style="font-weight: bold; font-family: monospace; color:#718096">Frage ${idx + 1} von ${sortedQuestions.length}</span>
       <span style="margin-left: auto;">\${levelBadge} <span class="badge" style="background-color: #ededed; color:#4a4a4a; border: 1px solid #d3d3d3;">\${q.section}</span></span>
     </div>
-    <div class="question-title">\${q.questionText}</div>
-    <div style="font-style: italic; color: #718096; margin-bottom: 15px; font-size: 0.95rem;">Übersetzung: \${q.translation || 'Deutschsprachiger Begleittext'}</div>
+    <div class="question-title">\${q.frage_de}</div>
     <div class="options-list">`;
 
-      q.options.forEach((opt, optIdx) => {
-        const isCorrect = optIdx === q.correctAnswerIndex;
+      q.options_de.forEach((opt) => {
+        const isCorrect = opt === q.richtige_antwort;
         htmlContent += `      <div class="option \${isCorrect ? 'correct' : ''}">
-        [\${optIdx === q.correctAnswerIndex ? '✓ Richtig' : ' '}] \${opt}
+        [\${isCorrect ? '✓ Richtig' : ' '}] \${opt}
       </div>`;
       });
 
       htmlContent += `    </div>
     <div class="explanation">
-      <strong>💡 Erklärung / Grammatik:</strong> \${q.explanation}
+      <strong>💡 Erklärung / Grammatik:</strong> \${q.erklaerung_de}
     </div>
   </div>\n`;
     });
@@ -313,7 +312,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'georg_edu_it_studienbegleiter.html';
+    link.download = 'italiano_app_studienbegleiter.html';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -356,15 +355,12 @@ export default function App() {
     saveStats(defaultStats);
   };
 
-  // Start a new basic category practice (e.g. 5 questions only to train a weakness)
+  // Start a new basic category practice (e.g. 10 questions to train a weakness)
   const handleStartCategoryQuiz = (sectionId: string) => {
     const filteredBySection = QUESTIONS.filter((q) => q.section === sectionId);
-    const levelFiltered = selectedLevelFilter === 'all'
-      ? filteredBySection
-      : filteredBySection.filter(q => q.level === selectedLevelFilter);
 
-    // Shuffle the matching ones and pick max 5 (or max available)
-    const shuffled = [...levelFiltered].sort(() => 0.5 - Math.random()).slice(0, Math.min(levelFiltered.length, 5));
+    // Shuffle the matching ones and pick max 10 (or max available)
+    const shuffled = [...filteredBySection].sort(() => 0.5 - Math.random()).slice(0, Math.min(filteredBySection.length, 10));
 
     setActiveQuizMode('practice');
     setActiveQuestions(shuffled);
@@ -373,11 +369,7 @@ export default function App() {
 
   // Start a Standard General Practice Quiz (10 questions chosen randomly)
   const handleStartGeneralPractice = () => {
-    const levelFiltered = selectedLevelFilter === 'all'
-      ? QUESTIONS
-      : QUESTIONS.filter(q => q.level === selectedLevelFilter);
-
-    const shuffled = [...levelFiltered].sort(() => 0.5 - Math.random()).slice(0, Math.min(levelFiltered.length, 10));
+    const shuffled = [...QUESTIONS].sort(() => 0.5 - Math.random()).slice(0, 10);
     setActiveQuizMode('practice');
     setActiveQuestions(shuffled);
     setActiveTab('quiz_session');
@@ -385,28 +377,21 @@ export default function App() {
 
   // Start custom Exam Mode (proportional questions balanced across categories to match mock, timed conditions)
   const handleStartExamSimulation = () => {
-    const levelFiltered = selectedLevelFilter === 'all'
-      ? QUESTIONS
-      : QUESTIONS.filter(q => q.level === selectedLevelFilter);
+    // Select questions balanced across sections dynamically
+    const idsBySection: Record<string, Question[]> = {};
 
-    // Select questions balanced across sections
-    const idsBySection: Record<SectionId, Question[]> = {
-      vocabulary: [],
-      grammar: [],
-      dialogues: [],
-      culture: []
-    };
-
-    levelFiltered.forEach((q) => {
+    QUESTIONS.forEach((q) => {
+      if (!idsBySection[q.section]) {
+        idsBySection[q.section] = [];
+      }
       idsBySection[q.section].push(q);
     });
 
     const selectedExamSet: Question[] = [];
-    Object.keys(idsBySection).forEach((key) => {
-      const shuffledSection = [...idsBySection[key as SectionId]].sort(() => 0.5 - Math.random());
-      // Pull proportional questions (e.g. 5 per category if combined, or 4 if filtered to keep appropriate size)
-      const perCategoryCount = selectedLevelFilter === 'all' ? 5 : 4;
-      selectedExamSet.push(...shuffledSection.slice(0, perCategoryCount));
+    Object.keys(idsBySection).forEach((section) => {
+      const shuffledSection = [...idsBySection[section]].sort(() => 0.5 - Math.random());
+      // Pull 5 questions per section of the 4 sections, yielding a 20-question exam
+      selectedExamSet.push(...shuffledSection.slice(0, 5));
     });
 
     // Final global shuffle of exam questions
@@ -461,7 +446,8 @@ export default function App() {
     // Merge mastery by section
     const sectionMasteryMerge = { ...stats.masteryBySection };
     activeQuestions.forEach((q) => {
-      const isCorrect = answers[q.id] === q.correctAnswerIndex;
+      const selectedIdx = answers[q.id];
+      const isCorrect = selectedIdx !== undefined && q.options_de[selectedIdx] === q.richtige_antwort;
       if (!sectionMasteryMerge[q.section]) {
         sectionMasteryMerge[q.section] = { answered: 0, correct: 0 };
       }
@@ -477,7 +463,8 @@ export default function App() {
     let updatedIncorrectPool = [...stats.incorrectQuestionIds];
     
     activeQuestions.forEach((q) => {
-      const isCorrect = answers[q.id] === q.correctAnswerIndex;
+      const selectedIdx = answers[q.id];
+      const isCorrect = selectedIdx !== undefined && q.options_de[selectedIdx] === q.richtige_antwort;
       if (isCorrect) {
         // Remove from error pool if it exists
         updatedIncorrectPool = updatedIncorrectPool.filter((id) => id !== q.id);
@@ -515,9 +502,7 @@ export default function App() {
   // Find css styles based on selected dynamic background
   const activeTheme = THEMES.find((theme) => theme.id === currentThemeId) || THEMES[0];
   const isN = designStyle === 'neobrutalist';
-  const activePoolCount = selectedLevelFilter === 'all'
-    ? QUESTIONS.length
-    : QUESTIONS.filter((q) => q.level === selectedLevelFilter).length;
+  const activePoolCount = QUESTIONS.length;
 
   return (
     <div
@@ -738,88 +723,66 @@ export default function App() {
                 </div>
               </div>
 
-              {/* LEVEL SEPARATION CONTROLLER */}
+              {/* GRAMMATIK KATEGORIE WÄHLEN - 4 MAIN BUTTONS */}
               <div
-                className={`p-4 sm:p-5 rounded-2xl space-y-4 transition-all duration-300 ${
+                className={`p-6 rounded-[28px] space-y-4 transition-all duration-300 ${
                   isN
-                    ? 'bg-slate-50 border-4 border-[#4D3B3B] text-[#4D3B3B]'
-                    : 'bg-slate-50/60 border border-slate-150 text-slate-800'
+                    ? 'bg-slate-50 border-4 border-[#4D3B3B]'
+                    : 'bg-slate-50/60 border border-slate-150'
                 }`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black uppercase tracking-wider font-mono flex items-center gap-2">
-                      <span>📚</span> Italienisch-Niveau trennen & filtern:
-                    </h3>
-                    <p className={`text-xs font-bold leading-normal mt-0.5 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
-                      Klicken Sie unten auf ein Sprachniveau, um die Fragen, Kategorien und Prüfungen für die A1 o. A2 Prüfung separat zu üben.
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-block px-3 py-1 font-mono text-[10px] sm:text-xs font-black rounded-lg uppercase tracking-wide self-start sm:self-center ${
-                      isN
-                        ? 'bg-[#FFD93D] border-2 border-[#4D3B3B] text-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
-                        : 'bg-indigo-600 text-white shadow-sm'
-                    }`}
-                  >
-                    Fokus: {selectedLevelFilter === 'all' ? 'A1 & A2 Gemischt' : selectedLevelFilter === 'A1' ? 'Nur Niveau A1' : 'Nur Niveau A2'}
-                  </span>
+                <div>
+                  <h3 className="text-lg sm:text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <span>✍️</span> Grammatik-Thema wählen:
+                  </h3>
+                  <p className={`text-xs sm:text-sm font-bold leading-normal mt-1 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
+                    Wählen Sie eine der vier grammatikalischen Säulen aus, um sofort gezielte Übungen mit verständlichen Erklärungen zu starten.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button
-                    onClick={() => setSelectedLevelFilter('all')}
-                    className={`py-3 px-3 rounded-xl text-center font-black transition-all cursor-pointer flex flex-col justify-center items-center w-full select-none ${
-                      selectedLevelFilter === 'all'
-                        ? isN
-                          ? 'bg-[#FFD93D] text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] -translate-y-0.5'
-                          : 'bg-indigo-600 text-white shadow-md border-transparent'
-                        : isN
-                          ? 'bg-white text-[#4D3B3B] border-2 border-[#4D3B3B] hover:bg-[#FFF8E1] hover:-translate-y-0.5 shadow-[2px_2px_0px_#4D3B3B]'
-                          : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm font-black uppercase tracking-wide">Alle Niveaus (A1 + A2)</span>
-                    <span className="text-[10px] font-mono mt-1 opacity-90 font-bold">
-                      {QUESTIONS.length} Lerneinheiten
-                    </span>
-                  </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { id: 'Verben', label: 'Verben', icon: '⚡', desc: 'Presente, Passato Prossimo, Imperfetto, Futuro, Condizionale' },
+                    { id: 'Nomen', label: 'Nomen', icon: '🏷️', desc: 'Sg./Pl., Genusvereinbarung, unregelmäßige Endungen' },
+                    { id: 'Präpositionen', label: 'Präpositionen', icon: '📍', desc: 'Semplici & articolate für Ort, Zeit und Bewegung' },
+                    { id: 'Artikel', label: 'Artikel', icon: '🔍', desc: 'Bestimmt und unbestimmt nach phonetischen Regeln' }
+                  ].map((cat) => {
+                    const count = QUESTIONS.filter(q => q.section === cat.id).length;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => handleStartCategoryQuiz(cat.id)}
+                        className={`p-5 rounded-2xl text-left transition-all duration-300 cursor-pointer flex flex-col justify-between lg:min-h-[170px] select-none h-full group ${
+                          isN
+                            ? 'bg-white text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B] hover:translate-y-0.5 hover:shadow-[1px_1px_0px_#4D3B3B]'
+                            : 'bg-white text-slate-750 border border-slate-200 hover:border-slate-350 hover:shadow-lg hover:scale-[1.02]'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-3xl select-none">{cat.icon}</span>
+                            <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded ${
+                              isN ? 'bg-[#FFF8E1] border-2 border-[#4D3B3B]' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {count} Fragen
+                            </span>
+                          </div>
+                          
+                          <h4 className={`text-lg sm:text-xl font-black group-hover:text-amber-500 transition-colors ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>
+                            {cat.label}
+                          </h4>
+                          
+                          <p className={`text-xs leading-relaxed font-semibold line-clamp-2 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
+                            {cat.desc}
+                          </p>
+                        </div>
 
-                  <button
-                    onClick={() => setSelectedLevelFilter('A1')}
-                    className={`py-3 px-3 rounded-xl text-center font-black transition-all cursor-pointer flex flex-col justify-center items-center w-full select-none ${
-                      selectedLevelFilter === 'A1'
-                        ? isN
-                          ? 'bg-[#4ECDC4] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] -translate-y-0.5'
-                          : 'bg-teal-600 text-white shadow-md border-transparent'
-                        : isN
-                          ? 'bg-white text-[#4D3B3B] border-2 border-[#4D3B3B] hover:bg-[#FFF8E1] hover:-translate-y-0.5 shadow-[2px_2px_0px_#4D3B3B]'
-                          : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm font-black uppercase tracking-wide">🏆 Niveau A1 (Anfänger)</span>
-                    <span className="text-[10px] font-mono mt-1 opacity-90 font-bold">
-                      {QUESTIONS.filter(q => q.level === 'A1').length} Lerneinheiten
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedLevelFilter('A2')}
-                    className={`py-3 px-3 rounded-xl text-center font-black transition-all cursor-pointer flex flex-col justify-center items-center w-full select-none ${
-                      selectedLevelFilter === 'A2'
-                        ? isN
-                          ? 'bg-[#FF6B6B] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] -translate-y-0.5'
-                          : 'bg-[#FF6B6B] text-white shadow-md border-transparent'
-                        : isN
-                          ? 'bg-white text-[#4D3B3B] border-2 border-[#4D3B3B] hover:bg-[#FFF8E1] hover:-translate-y-0.5 shadow-[2px_2px_0px_#4D3B3B]'
-                          : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm font-black uppercase tracking-wide">🔥 Niveau A2 (Integration)</span>
-                    <span className="text-[10px] font-mono mt-1 opacity-90 font-bold">
-                      {QUESTIONS.filter(q => q.level === 'A2').length} Lerneinheiten
-                    </span>
-                  </button>
+                        <span className={`text-xs font-black uppercase tracking-wider font-mono mt-4 flex items-center gap-1 group-hover:underline ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>
+                          Lernen starten →
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1037,7 +1000,7 @@ export default function App() {
                     Offizieller Support & Studien-Zentrum
                   </span>
                   <h3 className="text-xl sm:text-3xl font-black">
-                    Georg.edu Kontaktcenter
+                    Italiano App Supportcenter
                   </h3>
                   <p className={`text-xs sm:text-sm font-bold max-w-xl ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
                     Haben Sie Fragen zum Integrationsabkommen, zu den Sprachniveaus A1 oder A2 oder sonstige Anfragen? 
@@ -1090,7 +1053,7 @@ export default function App() {
                   isN ? 'border-[#4D3B3B]/10 text-[#4D3B3B]/70' : 'border-slate-100 text-slate-450'
                 }`}
               >
-                <span>Syllabus-Akkreditierung: Georg.edu Nationalportal</span>
+                <span>Syllabus-Akkreditierung: App Italiano Nationalportal</span>
                 <span>Entwickelt von: <strong className={`font-sans font-black ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>Olamgeorg</strong></span>
               </div>
             </div>
@@ -1259,7 +1222,7 @@ export default function App() {
               <div className="space-y-4">
                 {activeQuestions.map((q, index) => {
                   const userAnswerIndex = lastSessionResult.answers[q.id];
-                  const isCorrect = userAnswerIndex === q.correctAnswerIndex;
+                  const isCorrect = userAnswerIndex !== undefined && q.options_de[userAnswerIndex] === q.richtige_antwort;
 
                   return (
                     <div
@@ -1302,10 +1265,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      <h4 className={`text-lg font-black leading-snug ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>{q.questionText}</h4>
-                      {q.translation && (
-                        <p className="text-xs sm:text-sm text-[#FF6B6B] italic font-bold mb-3">"{q.translation}"</p>
-                      )}
+                      <h4 className={`text-lg font-black leading-snug ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>{q.frage_de}</h4>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                         <div 
@@ -1317,7 +1277,7 @@ export default function App() {
                         >
                           <span className="text-[10px] uppercase font-black tracking-wider text-[#FF6B6B] block">Ihre Antwort:</span>
                           <p className={`font-sans font-black mt-0.5 ${isN ? 'text-[#4D3B3B]/90' : 'text-slate-700'}`}>
-                            {userAnswerIndex !== undefined ? q.options[userAnswerIndex] : 'Keine Antwort'}
+                            {userAnswerIndex !== undefined ? q.options_de[userAnswerIndex] : 'Keine Antwort'}
                           </p>
                         </div>
                         <div 
@@ -1329,7 +1289,7 @@ export default function App() {
                         >
                           <span className="text-[10px] uppercase font-black tracking-wider text-[#4ECDC4] block">Richtige Antwort:</span>
                           <p className="font-sans font-black mt-0.5 text-[#4ECDC4]">
-                            {q.options[q.correctAnswerIndex]}
+                            {q.richtige_antwort}
                           </p>
                         </div>
                       </div>
@@ -1341,7 +1301,7 @@ export default function App() {
                             : 'bg-amber-50/60 border border-amber-100 text-slate-700'
                         }`}
                       >
-                        <strong className="text-rose-500 font-extrabold">Lernhinweis:</strong> {q.explanation}
+                        <strong className="text-rose-500 font-extrabold">Lernhinweis:</strong> {q.erklaerung_de}
                       </p>
                     </div>
                   );
@@ -1361,7 +1321,7 @@ export default function App() {
         }`}
       >
         <p className="text-xs leading-normal font-sans">
-          Accordo di Integrazione • Italienisches Schulungsprogramm der <strong className={`${isN ? '' : 'text-indigo-600'}`}>Georg.edu</strong>
+          Accordo di Integrazione • Italienisches Schulungsprogramm der <strong className={`${isN ? '' : 'text-indigo-600'}`}>App Italiano</strong>
         </p>
         <p className="text-xs font-mono tracking-wide">
           Entwickelt und gepflegt von <span className="font-sans font-black text-rose-500">Olamgeorg</span> • Support-Tel: <a href="tel:09134088925" className="hover:underline font-bold">09134088925</a> | E-Mail: <a href="mailto:olamgeorg9@gmail.com" className="hover:underline font-bold">olamgeorg9@gmail.com</a>

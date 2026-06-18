@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Question, QuizMode } from '../types';
-import { playCorrectTone, playIncorrectTone } from '../lib/audio';
+import { playCorrectTone, playIncorrectTone, playClickTone } from '../lib/audio';
 import { Clock, CheckCircle, XCircle, ArrowRight, ArrowLeft, RotateCcw, Home, Smile, AlertTriangle, BookOpen, AlertCircle, HelpCircle } from 'lucide-react';
 
 interface QuizSessionProps {
@@ -92,7 +92,7 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
       setCommittedAnswers((prev) => ({ ...prev, [qId]: true }));
 
       // Trigger respective audio buzzers immediately!
-      if (optionIndex === currentQuestion.correctAnswerIndex) {
+      if (currentQuestion.options_de[optionIndex] === currentQuestion.richtige_antwort) {
         playCorrectTone();
       } else {
         playIncorrectTone();
@@ -100,18 +100,21 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
     } else {
       // In Exam mode, you can change your answer freely until you submit
       setSelectedAnswers((prev) => ({ ...prev, [qId]: optionIndex }));
+      playClickTone();
     }
   };
 
   // Navigate forward/backward
   const handleNext = () => {
     if (currentIndex < totalQuestions - 1) {
+      playClickTone();
       setCurrentIndex((prev) => prev + 1);
     }
   };
 
   const handlePrev = () => {
     if (currentIndex > 0) {
+      playClickTone();
       setCurrentIndex((prev) => prev - 1);
     }
   };
@@ -124,7 +127,7 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
 
     questions.forEach((q) => {
       const selectedOffset = selectedAnswers[q.id];
-      if (selectedOffset === q.correctAnswerIndex) {
+      if (selectedOffset !== undefined && q.options_de[selectedOffset] === q.richtige_antwort) {
         correctCount++;
       } else {
         incorrectIds.push(q.id);
@@ -314,7 +317,7 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
                 : 'bg-sky-50 border border-sky-100 text-sky-700'
             }`}
           >
-            {currentQuestion.section === 'vocabulary' ? 'Wortschatz' : currentQuestion.section === 'grammar' ? 'Grammatik' : currentQuestion.section === 'dialogues' ? 'Alltagsdialoge' : 'Integration & Bürgerkunde'}
+            {currentQuestion.section}
           </span>
           
           <span 
@@ -324,46 +327,23 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
                 : 'bg-amber-100/70 border border-amber-200/60 text-amber-800'
             }`}
           >
-            NIVEAU {currentQuestion.level}
+            {currentQuestion.thema}
           </span>
         </div>
-
-        {/* Dialogue context wrapper if provided */}
-        {currentQuestion.questionContext && (
-          <div 
-            className={`p-4 space-y-1.5 transition-all duration-300 ${
-              isN
-                ? 'bg-[#FFF8E1] rounded-[20px] border-4 border-[#4D3B3B] shadow-[3px_3px_0px_#4D3B3B]'
-                : 'bg-slate-50 border border-slate-100 rounded-2xl shadow-inner'
-            }`}
-          >
-            <span className={`text-[11px] font-black uppercase tracking-wider block font-mono ${isN ? 'text-[#FF6B6B]' : 'text-slate-405'}`}>
-              Kontext / Gesprächs-Szenario:
-            </span>
-            <p className={`text-base sm:text-xl font-bold italic leading-relaxed whitespace-pre-line ${isN ? 'text-[#4D3B3B]' : 'text-slate-700'}`}>
-              {currentQuestion.questionContext}
-            </p>
-          </div>
-        )}
 
         {/* Primary Italian Question Text */}
         <div className="space-y-1.5">
           <h2 className={`text-xl sm:text-3xl font-black tracking-tight leading-tight ${isN ? 'text-[#4D3B3B]' : 'text-slate-850'}`}>
-            {currentQuestion.questionText}
+            {currentQuestion.frage_de}
           </h2>
-          {currentQuestion.translation && (mode === 'practice' || mode === 'remedial') && (
-            <p className={`text-sm sm:text-base italic font-black ${isN ? 'text-[#6C5CE7]' : 'text-indigo-620'}`}>
-              Auf Deutsch: "{currentQuestion.translation}"
-            </p>
-          )}
         </div>
 
         {/* Interactive Option Tapping Area: Vertical stack */}
         <div className="flex flex-col space-y-3 pt-2">
-          {currentQuestion.options.map((option, index) => {
+          {currentQuestion.options_de.map((option, index) => {
             const isSelected = selectedAnswers[currentQuestion.id] === index;
             const isCommitted = committedAnswers[currentQuestion.id];
-            const isCorrectAnswer = index === currentQuestion.correctAnswerIndex;
+            const isCorrectAnswer = option === currentQuestion.richtige_antwort;
 
             // Compute styling dynamically
             let optionStyle = '';
@@ -484,7 +464,7 @@ export const QuizSession: React.FC<QuizSessionProps> = ({
               </span>
             </div>
             <p className={`text-sm sm:text-base font-bold font-sans ${isN ? 'text-[#4D3B3B]' : 'text-slate-700'}`}>
-              {currentQuestion.explanation}
+              {currentQuestion.erklaerung_de}
             </p>
           </div>
         )}
