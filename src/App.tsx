@@ -1,1330 +1,1498 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect, useMemo } from 'react';
-import { UserStats, QuizMode, Question, SectionId } from './types';
-import { QUESTIONS, SECTIONS } from './questions';
-import { THEMES } from './lib/themes';
-import { getAudioMuted, setAudioMuted } from './lib/audio';
-import { AudioToggle } from './components/AudioToggle';
-import { ThemeSelector } from './components/ThemeSelector';
-import { StatsDashboard } from './components/StatsDashboard';
-import { ReviewList } from './components/ReviewList';
-import { QuizSession } from './components/QuizSession';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  GraduationCap,
   Award,
   BookOpen,
-  CheckCircle,
   Clock,
-  Home,
-  Play,
+  ArrowRight,
   RotateCcw,
-  Sparkles,
-  Trophy,
+  CheckCircle2,
   XCircle,
-  GraduationCap,
-  BookOpenCheck,
-  ChevronRight,
+  Home,
+  Check,
   AlertCircle,
-  Phone,
-  Mail,
   Download,
+  Info,
+  ChevronRight,
+  Mail,
   Smartphone,
-  Laptop
+  Sparkles,
+  Volume2,
+  Settings,
+  HelpCircle,
+  Flame,
+  CheckSquare
 } from 'lucide-react';
+import { Question, QuizMode } from './types';
+import { playSound } from './audio';
+import de from './lang/de.json';
 
-const STORAGE_STATS_KEY = 'olamgeorg_italian_quiz_stats';
-const STORAGE_THEME_KEY = 'olamgeorg_italian_quiz_theme';
-const STORAGE_MUTED_KEY = 'olamgeorg_italian_quiz_muted';
-const STORAGE_STYLE_KEY = 'olamgeorg_italian_quiz_style';
-
-const defaultStats: UserStats = {
-  quizzesTaken: 0,
-  examHighscore: 0,
-  totalQuestionsAnswered: 0,
-  correctAnswersCount: 0,
-  masteryBySection: {
-    Verben: { answered: 0, correct: 0 },
-    Nomen: { answered: 0, correct: 0 },
-    Präpositionen: { answered: 0, correct: 0 },
-    Artikel: { answered: 0, correct: 0 }
-  },
-  incorrectQuestionIds: []
+// Global translation lookup helper
+const t = (key: string, variables?: Record<string, string | number>): string => {
+  const parts = key.split('.');
+  let current: any = de;
+  for (const part of parts) {
+    if (current && typeof current === 'object' && part in current) {
+      current = current[part];
+    } else {
+      return key;
+    }
+  }
+  if (typeof current !== 'string') return key;
+  if (variables) {
+    let result = current;
+    for (const [k, v] of Object.entries(variables)) {
+      result = result.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+    }
+    return result;
+  }
+  return current;
 };
 
+// Generic Fisher-Yates array shuffling helper
+function shuffleFisherYatesGeneric<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function cleanQuestionText(text: string): string {
+  if (!text) return '';
+  let cleaned = text;
+
+  // 1. Remove parentheticals containing German keywords or translations
+  cleaned = cleaned.replace(/\s*\([^)]*\)/g, (match) => {
+    const content = match.slice(1, -1).trim();
+    const lower = content.toLowerCase();
+    
+    if (lower.startsWith('verbo:')) {
+      const parts = content.split(',');
+      return ` (${parts[0].trim()})`;
+    }
+    
+    const isGerman = /ä|ö|ü|ß|oder|und|von|für|auf|im|wer|wie|was|wo|ihm|ihr|ihnen|an|zu|nach|in|herkunft|gewohnheit|aufforderung|befehl|wunsch|zahlen|kategorie|bestimmter|unbestimmter|bestimmte|unbestimmte|mehrzahl|singular|konjugation|gegenwart|vergangenheit|zukunft|konditional|perfekt|buch|tisch|junge|kaffee|zug|hund|onkel|rucksack|student|spiegel|freund|baum|uhr|flughafen|haus|stuhl|tür|auto|schlüssel|freundin|orange|insel|klassenzimmer/i.test(lower) ||
+                     !(lower.includes('verbo') || lower === 'io' || lower === 'tu' || lower === 'lui/lei' || lower === 'noi' || lower === 'voi' || lower === 'loro');
+    
+    return isGerman ? '' : match;
+  });
+
+  // 2. Remove standard brackets [ ] containing German
+  cleaned = cleaned.replace(/\s*\[[^\]]*\]/g, (match) => {
+    const content = match.slice(1, -1).trim();
+    const lower = content.toLowerCase();
+    const isGerman = /ä|ö|ü|ß|oder|und|von|für|auf|im|wer|wie|was|wo|ihm|ihr|ihnen|an|zu|nach|in|herkunft|gewohnheit|aufforderung|befehl|wunsch|zahlen|kategorie|bestimmter|unbestimmter|bestimmte|unbestimmte|mehrzahl|singular|konjugation|gegenwart|vergangenheit|zukunft|konditional|perfekt/i.test(lower);
+    return isGerman ? '' : match;
+  });
+
+  return cleaned.replace(/\s+/g, ' ').replace(/\s+:/g, ':').trim();
+}
+
+interface MappedOption {
+  text: string;
+  isCorrect: boolean;
+}
+
+interface ExamAnswer {
+  questionId: number;
+  questionText: string;
+  selectedOptionText: string;
+  correctOptionText: string;
+  isCorrect: boolean;
+  explanation: string;
+}
+
+const EXAM_SIZE = 10;
+
+// High-fidelity CSS rendered Italian Flag icon
+function ItalianFlag({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClasses = {
+    sm: 'h-3.5 w-5 rounded-sm',
+    md: 'h-5 w-7 rounded',
+    lg: 'h-7 w-12 rounded-md'
+  };
+  return (
+    <div className={`inline-flex overflow-hidden shadow-sm border border-slate-200/80 shrink-0 ${sizeClasses[size]}`}>
+      <div className="bg-[#009246] w-1/3 h-full"></div>
+      <div className="bg-[#f1f2f1] w-1/3 h-full"></div>
+      <div className="bg-[#ce2b37] w-1/3 h-full"></div>
+    </div>
+  );
+}
+
+// Course categories / Grammatical modules
+const CATEGORIES: Record<string, { name: string; desc: string; icon: string }> = {
+  all: {
+    name: "Alle Übungen (Gemischt)",
+    desc: "Bunter Mix aus allen Grammatik- & Wortschatzthemen der Niveaustufe.",
+    icon: "GraduationCap"
+  },
+  praesens_modal: {
+    name: "Verben: Gegenwart / Präsens",
+    desc: "Konjugation von Verben (are/ere/ire, essere, avere, fare, potere, volere...).",
+    icon: "BookOpen"
+  },
+  vergangenheit: {
+    name: "Verben: Passato Prossimo",
+    desc: "Bildung des Perfekts mit den Hilftsverben 'avere' oder 'essere' im Rückblicksdrills.",
+    icon: "Clock"
+  },
+  zukunft_konditional: {
+    name: "Zukunft, Imperativ & Konditional",
+    desc: "Pläne im Futuro Semplice, Bitten im Condizionale und Höflichkeitsanweisungen.",
+    icon: "Award"
+  },
+  nomen_artikel: {
+    name: "Substantive & Artikel",
+    desc: "Bestimmter/Unbestimmter Artikel (il, lo, la, i, gli, le...) und Grammatik der Mehrzahl.",
+    icon: "Check"
+  },
+  praepositionen: {
+    name: "Präpositionen (A1 & Articolate)",
+    desc: "Verschmelzungen und Verwendungen von di, da, in, a, su, con, per.",
+    icon: "Info"
+  },
+  adjektive_pronomen: {
+    name: "Adjektive, Pronomen & Steigerung",
+    desc: "Possessivbegleiter sowie direkte/indirekte Artikelpronomen (lo, la, ci...).",
+    icon: "HelpCircle"
+  },
+  wortschatz_alltag: {
+    name: "Wortschatz, Uhrzeit & Alltag",
+    desc: "Zahlen, Essen & Getränke, Familie, Wochentage, Monate, Begrüßungen im Alltag.",
+    icon: "Sparkles"
+  }
+};
+
+// Dynamic local categorizer function
+export function getQuestionCategory(q: Question): string {
+  const qStr = q.question.toLowerCase();
+  const expl = q.explanation.toLowerCase();
+  
+  if (
+    expl.includes("passato prossimo") ||
+    expl.includes("imperfetto") ||
+    expl.includes("vergangenheit") ||
+    expl.includes("ausiliare") ||
+    expl.includes("partizip") ||
+    expl.includes("participio") ||
+    expl.includes("perfekt")
+  ) {
+    return "vergangenheit";
+  }
+  
+  if (
+    expl.includes("futuro") ||
+    expl.includes("zukunft") ||
+    expl.includes("condizionale") ||
+    expl.includes("konditional") ||
+    expl.includes("imperativo") ||
+    expl.includes("aufforderung")
+  ) {
+    return "zukunft_konditional";
+  }
+  
+  if (
+    expl.includes("präsens") ||
+    expl.includes("konjugation") ||
+    expl.includes("endung für") ||
+    expl.includes("verbo:") ||
+    expl.includes("verbi") ||
+    expl.includes("modalverben") ||
+    expl.includes("essere") ||
+    expl.includes("avere") ||
+    expl.includes("fare") ||
+    expl.includes("andare") ||
+    expl.includes("potere") ||
+    expl.includes("volere") ||
+    expl.includes("dovere") ||
+    expl.includes("dire") ||
+    expl.includes("sapere") ||
+    expl.includes("uscire")
+  ) {
+    return "praesens_modal";
+  }
+
+  if (
+    expl.includes("präposition") ||
+    expl.includes("preposizione") ||
+    expl.includes("preposizioni") ||
+    expl.includes("verschmilzt") ||
+    expl.includes("verschmelzung") ||
+    qStr.includes("preposizione")
+  ) {
+    return "praepositionen";
+  }
+
+  if (
+    qStr.includes("articolo") ||
+    expl.includes("artikel") ||
+    expl.includes("singular von") ||
+    expl.includes("plural von") ||
+    expl.includes("nomen im") ||
+    expl.includes("substantiv")
+  ) {
+    return "nomen_artikel";
+  }
+
+  if (
+    expl.includes("adjektiv") ||
+    expl.includes("adjektive") ||
+    expl.includes("pronomen") ||
+    expl.includes("pronome") ||
+    expl.includes("pronomi") ||
+    expl.includes("possessiv") ||
+    expl.includes("superlative") ||
+    expl.includes("komparative") ||
+    qStr.includes("pronome") ||
+    qStr.includes("aggettivo")
+  ) {
+    return "adjektive_pronomen";
+  }
+
+  return "wortschatz_alltag";
+}
+
 export default function App() {
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<'main' | 'quiz_session' | 'stats' | 'review' | 'finished_overview'>('main');
+  // Application routing / screen state
+  const [screen, setScreen] = useState<'loading' | 'level_select' | 'category_select' | 'mode_select' | 'quiz' | 'result_screen'>('loading');
+  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
+  const [selectedLevel, setSelectedLevel] = useState<'A1' | 'A2'>('A1');
+  const [quizMode, setQuizMode] = useState<QuizMode>('practice');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Level selector state (None, A1, A2) to separate A1 from A2
-  const [selectedLevelFilter, setSelectedLevelFilter] = useState<'all' | 'A1' | 'A2'>('all');
+  // Senior Accessibility State Attributes
+  const [textSize, setTextSize] = useState<'normal' | 'groß' | 'extra-groß'>('groß'); // Default to 'groß' (large text) for old German users
+  const [speechRate, setSpeechRate] = useState<number>(0.75); // Slow-paced comfortable listening speed for older learners
+  const [showAccessibilityPanel, setShowAccessibilityPanel] = useState<boolean>(false);
 
-  // Theme, Sound & Style Configuration
-  const [currentThemeId, setCurrentThemeId] = useState<string>('coral-sunset');
-  const [designStyle, setDesignStyle] = useState<'neobrutalist' | 'modern'>('neobrutalist');
-  const [audioMuted, setAudioMutedState] = useState<boolean>(false);
+  // AI-Powered Translations and lerntipps states
+  const [aiTranslation, setAiTranslation] = useState<string>('');
+  const [aiTip, setAiTip] = useState<string>('');
+  const [loadingAi, setLoadingAi] = useState<boolean>(false);
 
-  // Stats Database State
-  const [stats, setStats] = useState<UserStats>(defaultStats);
+  // Persistent seen questions state to avoid duplicates
+  const [seenQuestionIds, setSeenQuestionIds] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem('seen_question_ids_v3');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  // Active Game State
-  const [activeQuizMode, setActiveQuizMode] = useState<QuizMode | 'remedial'>('practice');
-  const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
-  const [lastSessionResult, setLastSessionResult] = useState<{
-    totalQuestions: number;
-    correctCount: number;
-    answers: Record<string, number>;
-    incorrectIds: string[];
-    mode: QuizMode | 'remedial';
-  } | null>(null);
+  // Active quiz session values
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const [shuffledOptions, setShuffledOptions] = useState<MappedOption[]>([]);
+  const [answered, setAnswered] = useState<boolean>(false);
+  const [clickedOptionIndex, setClickedOptionIndex] = useState<number | null>(null);
 
-  // PWA & Download state hooks
+  // Practice session statistics counters
+  const [practiceCorrectCount, setPracticeCorrectCount] = useState<number>(0);
+  const [practiceTotalCount, setPracticeTotalCount] = useState<number>(0);
+
+  // Exam session values
+  const [examQuestions, setExamQuestions] = useState<Question[]>([]);
+  const [examIndex, setExamIndex] = useState<number>(0);
+  const [examAnswers, setExamAnswers] = useState<ExamAnswer[]>([]);
+
+  // Timer controls
+  const [timeLeft, setTimeLeft] = useState<number>(60);
+  const telemetryVersion = 'M615-PWA-TTS';
+  const startTimeRef = useRef<number>(0);
+
+  // PWA Prompt Support
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showPwaPrompt, setShowPwaPrompt] = useState<boolean>(false);
+  const [showInstallBtn, setShowInstallBtn] = useState<boolean>(false);
 
-  // Setup PWA install handler listener
   useEffect(() => {
-    const handleBeforePrompt = (e: Event) => {
+    const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowPwaPrompt(true);
+      setShowInstallBtn(true);
     };
-    window.addEventListener('beforeinstallprompt', handleBeforePrompt);
+    window.addEventListener('beforeinstallprompt', handler);
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforePrompt);
+      window.removeEventListener('beforeinstallprompt', handler);
     };
   }, []);
 
-  // Load configuration and statistics from localStorage on boot
-  useEffect(() => {
-    // Stats loading
-    try {
-      const persistedStats = localStorage.getItem(STORAGE_STATS_KEY);
-      if (persistedStats) {
-        const parsed = JSON.parse(persistedStats);
-        // Safely extend in case keys ever change
-        setStats({ ...defaultStats, ...parsed });
-      }
-    } catch (e) {
-      console.warn('Could not load stats from localStorage', e);
-    }
-
-    // Theme loading
-    try {
-      const persistedTheme = localStorage.getItem(STORAGE_THEME_KEY);
-      if (persistedTheme) {
-        setCurrentThemeId(persistedTheme);
-      }
-    } catch (e) {
-      console.warn('Could not load theme', e);
-    }
-
-    // Design structure style loading
-    try {
-      const persistedStyle = localStorage.getItem(STORAGE_STYLE_KEY);
-      if (persistedStyle === 'modern' || persistedStyle === 'neobrutalist') {
-        setDesignStyle(persistedStyle);
-      }
-    } catch (e) {
-      console.warn('Could not load style', e);
-    }
-
-    // Audio muted loading
-    try {
-      const persistedMuted = localStorage.getItem(STORAGE_MUTED_KEY);
-      if (persistedMuted) {
-        const isMuted = JSON.parse(persistedMuted);
-        setAudioMutedState(isMuted);
-        setAudioMuted(isMuted);
-      }
-    } catch (e) {
-      console.warn('Could not load audio state', e);
-    }
-  }, []);
-
-  // Sync statistics to localStorage
-  const saveStats = (newStats: UserStats) => {
-    setStats(newStats);
-    try {
-      localStorage.setItem(STORAGE_STATS_KEY, JSON.stringify(newStats));
-    } catch (e) {
-      console.warn('Could not save stats to localStorage', e);
-    }
-  };
-
-  // Install Progressive Web App (PWA) Handler
-  const handleInstallPWA = async () => {
-    if (!deferredPrompt) {
-      alert("Der PWA-Installer ist im Browser noch nicht bereit oder die App ist bereits installiert. Tipp: Auf Mobilgeräten (z. B. iOS Safari) tippen Sie auf 'Teilen' -> 'Zum Home-Bildschirm hinzufügen'.");
-      return;
-    }
+  const triggerNativeInstall = async () => {
+    if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('User accepted PWA installation');
-      setShowPwaPrompt(false);
-      setDeferredPrompt(null);
+    console.log(`Native install selection outcome: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
+  };
+
+  // Load questions database on mount
+  useEffect(() => {
+    fetch('/questions.json')
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Fehler beim Laden von questions.json');
+        }
+        return res.json();
+      })
+      .then((data: Question[]) => {
+        const cleanedData = data.map(q => ({
+          ...q,
+          question: cleanQuestionText(q.question)
+        }));
+        setAllQuestions(cleanedData);
+        setScreen('level_select');
+      })
+      .catch((err) => {
+        console.error("Datenbankfehler:", err);
+        setScreen('level_select');
+      });
+  }, []);
+
+  // Update persistent seen list
+  const markAsSeen = (id: number) => {
+    setSeenQuestionIds((prev) => {
+      const nextSeen = [...new Set([...prev, id])];
+      try {
+        localStorage.setItem('seen_question_ids_v3', JSON.stringify(nextSeen));
+      } catch (e) {
+        console.error(e);
+      }
+      return nextSeen;
+    });
+  };
+
+  // Fisher-Yates mapping configuration so option buttons are dynamically scrambled
+  const mapAndShuffleOptions = (q: Question) => {
+    const mapped = q.options.map((opt, idx) => ({
+      text: opt,
+      isCorrect: idx === q.correctIndex
+    }));
+    return shuffleFisherYatesGeneric(mapped);
+  };
+
+  // Speaks complete Italian sentence using Browser SpeechSynthesis
+  const readSentenceAloud = (sentence: string, fillWord?: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Stop any pending reading
+      
+      // If there is a blank, substitute with correct answer or placeholder
+      const textToSpeak = sentence.includes("___") && fillWord 
+        ? sentence.replace("___", fillWord) 
+        : sentence;
+
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'it-IT';
+      utterance.rate = speechRate; // Slower rate tailored for older seniors
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert("Sprachausgabe wird in diesem Browser leider nicht unterstützt.");
     }
   };
 
-  // Standalone offline study kit compiler & downloader
-  const downloadOfflineStudyKit = () => {
-    const sortedQuestions = [...QUESTIONS];
-    let htmlContent = `<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.5">
-  <title>App Italiano • Italienisch Lernen A1-A2 Studienbegleiter</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.6;
-      color: #2d3748;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 30px 20px;
-      background-color: #f7fafc;
-    }
-    h1 {
-      color: #0b1a30;
-      border-bottom: 2px solid #009246;
-      padding-bottom: 15px;
-      text-align: center;
-      margin-bottom: 5px;
-    }
-    .meta-subtitle {
-      text-align: center;
-      color: #718096;
-      font-weight: bold;
-      margin-bottom: 30px;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      font-size: 0.8rem;
-      font-weight: bold;
-      border-radius: 4px;
-      margin-right: 5px;
-    }
-    .badge-a1 { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
-    .badge-a2 { background-color: #faf5ff; color: #6b46c1; border: 1px solid #e9d8fd; }
-    .card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 25px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    .question-title {
-      font-weight: 800;
-      font-size: 1.15rem;
-      margin-bottom: 12px;
-      color: #1a202c;
-    }
-    .options-list {
-      margin-left: 0;
-      padding-left: 0;
-      list-style-type: none;
-    }
-    .option {
-      padding: 10px 15px;
-      border: 1px solid #edf2f7;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      background-color: #fafdff;
-    }
-    .option.correct {
-      background-color: #f0fff4;
-      border-color: #c6f6d5;
-      color: #22543d;
-      font-weight: bold;
-    }
-    .explanation {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px dashed #e2e8f0;
-      font-size: 0.95rem;
-      color: #4a5568;
-      background-color: #fffaf0;
-      padding: 12px;
-      border-radius: 6px;
-    }
-    .header-info-box {
-      background: #edf2f7;
-      padding: 15px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      margin-bottom: 30px;
-      text-align: center;
-    }
-    @media print {
-      body { background-color: white; padding: 0; }
-      .card { box-shadow: none; page-break-inside: avoid; border-color: #cbd5e0; }
-      .header-info-box, .meta-subtitle { margin-bottom: 15px; }
-    }
-  </style>
-</head>
-<body>
-  <h1>App Italiano • Accordo di Integrazione</h1>
-  <div class="meta-subtitle">Italienisch-Integrationsstudienbegleiter (Niveau A1 & A2)</div>
+  // Fetch AI Translation & Grammar Lerntipp on background from full-stack Gemini service
+  const retrieveAiTranslation = async (q: Question) => {
+    setAiTranslation('');
+    setAiTip('');
+    setLoadingAi(true);
 
-  <div class="header-info-box">
-    <strong>Offizielles Lern- und Begleitmaterial</strong> aus der <strong>App Italiano</strong>-Lernplattform.<br>
-    Support-Hotline: <strong>09134088925</strong> | E-Mail: <strong>olamgeorg9@gmail.com</strong><br>
-    <em>Offline-Kopie generiert am ${new Date().toLocaleDateString('de-DE')}</em>
-  </div>
+    const correctAnswerText = q.options[q.correctIndex];
 
-  <div style="margin-bottom: 20px; font-weight: bold;">Gesamtfragen im Paket: ${sortedQuestions.length}</div>
-`;
-
-    sortedQuestions.forEach((q, idx) => {
-      const levelBadge = `<span class="badge badge-a1">${q.thema}</span>`;
-      htmlContent += `  <div class="card">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-      <span style="font-weight: bold; font-family: monospace; color:#718096">Frage ${idx + 1} von ${sortedQuestions.length}</span>
-      <span style="margin-left: auto;">\${levelBadge} <span class="badge" style="background-color: #ededed; color:#4a4a4a; border: 1px solid #d3d3d3;">\${q.section}</span></span>
-    </div>
-    <div class="question-title">\${q.frage_de}</div>
-    <div class="options-list">`;
-
-      q.options_de.forEach((opt) => {
-        const isCorrect = opt === q.richtige_antwort;
-        htmlContent += `      <div class="option \${isCorrect ? 'correct' : ''}">
-        [\${isCorrect ? '✓ Richtig' : ' '}] \${opt}
-      </div>`;
+    try {
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: q.question,
+          correctAnswer: correctAnswerText
+        })
       });
 
-      htmlContent += `    </div>
-    <div class="explanation">
-      <strong>💡 Erklärung / Grammatik:</strong> \${q.erklaerung_de}
-    </div>
-  </div>\n`;
-    });
-
-    htmlContent += `</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'italiano_app_studienbegleiter.html';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Theme handling
-  const handleSelectTheme = (themeId: string) => {
-    setCurrentThemeId(themeId);
-    try {
-      localStorage.setItem(STORAGE_THEME_KEY, themeId);
-    } catch (e) {
-      console.warn('Could not save theme', e);
-    }
-  };
-
-  // Design style selection
-  const handleSelectDesignStyle = (style: 'neobrutalist' | 'modern') => {
-    setDesignStyle(style);
-    try {
-      localStorage.setItem(STORAGE_STYLE_KEY, style);
-    } catch (e) {
-      console.warn('Could not save design style', e);
-    }
-  };
-
-  // Audio handling
-  const handleAudioToggle = () => {
-    const nextMuted = !audioMuted;
-    setAudioMutedState(nextMuted);
-    try {
-      localStorage.setItem(STORAGE_MUTED_KEY, JSON.stringify(nextMuted));
-    } catch (e) {
-      console.warn('Could not save muted configuration', e);
-    }
-  };
-
-  // Clear/Reset statistics
-  const handleResetStats = () => {
-    saveStats(defaultStats);
-  };
-
-  // Start a new basic category practice (e.g. 10 questions to train a weakness)
-  const handleStartCategoryQuiz = (sectionId: string) => {
-    const filteredBySection = QUESTIONS.filter((q) => q.section === sectionId);
-
-    // Shuffle the matching ones and pick max 10 (or max available)
-    const shuffled = [...filteredBySection].sort(() => 0.5 - Math.random()).slice(0, Math.min(filteredBySection.length, 10));
-
-    setActiveQuizMode('practice');
-    setActiveQuestions(shuffled);
-    setActiveTab('quiz_session');
-  };
-
-  // Start a Standard General Practice Quiz (10 questions chosen randomly)
-  const handleStartGeneralPractice = () => {
-    const shuffled = [...QUESTIONS].sort(() => 0.5 - Math.random()).slice(0, 10);
-    setActiveQuizMode('practice');
-    setActiveQuestions(shuffled);
-    setActiveTab('quiz_session');
-  };
-
-  // Start custom Exam Mode (proportional questions balanced across categories to match mock, timed conditions)
-  const handleStartExamSimulation = () => {
-    // Select questions balanced across sections dynamically
-    const idsBySection: Record<string, Question[]> = {};
-
-    QUESTIONS.forEach((q) => {
-      if (!idsBySection[q.section]) {
-        idsBySection[q.section] = [];
-      }
-      idsBySection[q.section].push(q);
-    });
-
-    const selectedExamSet: Question[] = [];
-    Object.keys(idsBySection).forEach((section) => {
-      const shuffledSection = [...idsBySection[section]].sort(() => 0.5 - Math.random());
-      // Pull 5 questions per section of the 4 sections, yielding a 20-question exam
-      selectedExamSet.push(...shuffledSection.slice(0, 5));
-    });
-
-    // Final global shuffle of exam questions
-    selectedExamSet.sort(() => 0.5 - Math.random());
-
-    setActiveQuizMode('exam');
-    setActiveQuestions(selectedExamSet);
-    setActiveTab('quiz_session');
-  };
-
-  // Start Fehlertraining (remedial on missed question index)
-  const handleStartRemedialQuiz = () => {
-    if (stats.incorrectQuestionIds.length === 0) return;
-
-    // Grab actual questions
-    const remedialSet = stats.incorrectQuestionIds
-      .map(id => QUESTIONS.find((q) => q.id === id))
-      .filter((q): q is Question => q !== undefined);
-
-    setActiveQuizMode('remedial');
-    setActiveQuestions(remedialSet);
-    setActiveTab('quiz_session');
-  };
-
-  // Manual elimination of items from error log
-  const handleRemoveFromIncorrect = (qId: string) => {
-    const updatedIds = stats.incorrectQuestionIds.filter((id) => id !== qId);
-    saveStats({
-      ...stats,
-      incorrectQuestionIds: updatedIds
-    });
-  };
-
-  // Handle Quiz completion
-  const handleQuizFinished = (results: {
-    totalQuestions: number;
-    correctCount: number;
-    answers: Record<string, number>;
-    incorrectIds: string[];
-  }) => {
-    const { totalQuestions, correctCount, answers, incorrectIds } = results;
-    const sessionAccuracy = Math.round((correctCount / totalQuestions) * 100);
-
-    // Build the new user stats
-    let totalQuizzesTaken = stats.quizzesTaken + 1;
-    let highscore = stats.examHighscore;
-
-    if (activeQuizMode === 'exam') {
-      highscore = Math.max(stats.examHighscore, sessionAccuracy);
-    }
-
-    // Merge mastery by section
-    const sectionMasteryMerge = { ...stats.masteryBySection };
-    activeQuestions.forEach((q) => {
-      const selectedIdx = answers[q.id];
-      const isCorrect = selectedIdx !== undefined && q.options_de[selectedIdx] === q.richtige_antwort;
-      if (!sectionMasteryMerge[q.section]) {
-        sectionMasteryMerge[q.section] = { answered: 0, correct: 0 };
-      }
-      sectionMasteryMerge[q.section].answered += 1;
-      if (isCorrect) {
-        sectionMasteryMerge[q.section].correct += 1;
-      }
-    });
-
-    // Recompute the correct/incorrect IDs tracking pool
-    // In remedial mode: if correctly answered, remove from historical pool. If still wrong, keep it.
-    // In regular mode: if wrong, add to pool. If correct, remove from pool if it was there before.
-    let updatedIncorrectPool = [...stats.incorrectQuestionIds];
-    
-    activeQuestions.forEach((q) => {
-      const selectedIdx = answers[q.id];
-      const isCorrect = selectedIdx !== undefined && q.options_de[selectedIdx] === q.richtige_antwort;
-      if (isCorrect) {
-        // Remove from error pool if it exists
-        updatedIncorrectPool = updatedIncorrectPool.filter((id) => id !== q.id);
-      } else {
-        // Add to error pool if not already present
-        if (!updatedIncorrectPool.includes(q.id)) {
-          updatedIncorrectPool.push(q.id);
+      if (response.ok) {
+        const bodyValue = await response.json();
+        if (bodyValue && bodyValue.translation) {
+          setAiTranslation(bodyValue.translation);
+          setAiTip(bodyValue.tip || '');
+          setLoadingAi(false);
+          return;
         }
       }
-    });
+    } catch (e) {
+      console.warn("Backend Gemini API translation failed, activating automatic fallback:", e);
+    }
 
-    const newStats: UserStats = {
-      ...stats,
-      quizzesTaken: totalQuizzesTaken,
-      examHighscore: highscore,
-      totalQuestionsAnswered: stats.totalQuestionsAnswered + totalQuestions,
-      correctAnswersCount: stats.correctAnswersCount + correctCount,
-      masteryBySection: sectionMasteryMerge,
-      incorrectQuestionIds: updatedIncorrectPool
-    };
+    // Dynamic fallback offline translator
+    let staticGermanTranslation = q.explanation;
+    // Extract a translation heuristic if enclosed in parenthesis or quotes
+    const match = q.explanation.match(/\((.*?)\)/);
+    if (match && match[1]) {
+      staticGermanTranslation = match[1];
+    }
 
-    saveStats(newStats);
+    // Create a beautiful localized fallback
+    const completeSentence = q.question.replace("___", correctAnswerText);
 
-    setLastSessionResult({
-      totalQuestions,
-      correctCount,
-      answers,
-      incorrectIds,
-      mode: activeQuizMode
-    });
-
-    setActiveTab('finished_overview');
+    setTimeout(() => {
+      setAiTranslation(`[Deutsche Übersetzung] „${completeSentence}“`);
+      setAiTip(`Deuter-Tipp: Das korrekte Wort lautet „${correctAnswerText}“. Erläuterung: ${q.explanation}`);
+      setLoadingAi(false);
+    }, 400);
   };
 
-  // Find css styles based on selected dynamic background
-  const activeTheme = THEMES.find((theme) => theme.id === currentThemeId) || THEMES[0];
-  const isN = designStyle === 'neobrutalist';
-  const activePoolCount = QUESTIONS.length;
+  // Fetch list of matching questions based on Level + Category filter without duplicates
+  const getFilteredQuestionsPool = (level: 'A1' | 'A2', categoryKey: string) => {
+    const levelOnly = allQuestions.filter((q) => q.level === level);
+    if (categoryKey === 'all') return levelOnly;
+    return levelOnly.filter((q) => getQuestionCategory(q) === categoryKey);
+  };
+
+  // Select next question for Practice Mode
+  const handleNextPracticeQuestion = () => {
+    setAnswered(false);
+    setClickedOptionIndex(null);
+
+    const activePool = getFilteredQuestionsPool(selectedLevel, selectedCategory);
+    if (activePool.length === 0) return;
+
+    // Filter out seen ones
+    let unseen = activePool.filter((q) => !seenQuestionIds.includes(q.id));
+
+    if (unseen.length === 0) {
+      // Recycle seen database for this specific module
+      const poolIds = activePool.map((q) => q.id);
+      const updatedSeen = seenQuestionIds.filter((id) => !poolIds.includes(id));
+      setSeenQuestionIds(updatedSeen);
+      try {
+        localStorage.setItem('seen_question_ids_v3', JSON.stringify(updatedSeen));
+      } catch {}
+      unseen = [...activePool];
+    }
+
+    const nextQ = unseen[Math.floor(Math.random() * unseen.length)];
+    setCurrentQuestion(nextQ);
+    setShuffledOptions(mapAndShuffleOptions(nextQ));
+    markAsSeen(nextQ.id);
+
+    // Call Gemini API translation on background
+    retrieveAiTranslation(nextQ);
+  };
+
+  // Start Practice quiz
+  const handleStartPractice = () => {
+    setQuizMode('practice');
+    setScreen('quiz');
+    setAnswered(false);
+    setClickedOptionIndex(null);
+
+    const activePool = getFilteredQuestionsPool(selectedLevel, selectedCategory);
+    if (activePool.length === 0) return;
+
+    let unseen = activePool.filter((q) => !seenQuestionIds.includes(q.id));
+    if (unseen.length === 0) {
+      const poolIds = activePool.map((q) => q.id);
+      const updatedSeen = seenQuestionIds.filter((id) => !poolIds.includes(id));
+      setSeenQuestionIds(updatedSeen);
+      try {
+        localStorage.setItem('seen_question_ids_v3', JSON.stringify(updatedSeen));
+      } catch {}
+      unseen = [...activePool];
+    }
+
+    const nextQ = unseen[Math.floor(Math.random() * unseen.length)];
+    setCurrentQuestion(nextQ);
+    setShuffledOptions(mapAndShuffleOptions(nextQ));
+    markAsSeen(nextQ.id);
+
+    // Trigger AI translation
+    retrieveAiTranslation(nextQ);
+  };
+
+  // Start Exam quiz
+  const handleStartExam = () => {
+    setQuizMode('exam');
+    setScreen('quiz');
+    setAnswered(false);
+    setClickedOptionIndex(null);
+
+    const activePool = getFilteredQuestionsPool(selectedLevel, selectedCategory);
+    if (activePool.length === 0) return;
+
+    const examCount = Math.min(activePool.length, EXAM_SIZE);
+    let unseen = activePool.filter((q) => !seenQuestionIds.includes(q.id));
+
+    let examSet: Question[] = [];
+    if (unseen.length >= examCount) {
+      examSet = unseen.slice(0, examCount);
+    } else {
+      examSet = [...unseen];
+      const needed = examCount - unseen.length;
+
+      const poolIds = activePool.map((q) => q.id);
+      const updatedSeen = seenQuestionIds.filter((id) => !poolIds.includes(id));
+      setSeenQuestionIds(updatedSeen);
+      try {
+        localStorage.setItem('seen_question_ids_v3', JSON.stringify(updatedSeen));
+      } catch {}
+
+      const recycled = activePool.filter((q) => !examSet.some((u) => u.id === q.id));
+      const shuffledRecycled = shuffleFisherYatesGeneric<Question>(recycled);
+      examSet.push(...shuffledRecycled.slice(0, needed));
+    }
+
+    const finalSet = shuffleFisherYatesGeneric(examSet);
+    setExamQuestions(finalSet);
+    setExamIndex(0);
+    setExamAnswers([]);
+
+    const firstQ = finalSet[0];
+    setCurrentQuestion(firstQ);
+    setShuffledOptions(mapAndShuffleOptions(firstQ));
+    markAsSeen(firstQ.id);
+
+    // Fetch AI translation in the background for exam summary context
+    retrieveAiTranslation(firstQ);
+  };
+
+  // Handle option click behavior with direct Audio synthesis connection
+  const handleOptionClick = (idx: number) => {
+    if (answered) return;
+    
+    // Play option tick click
+    playSound('click');
+
+    setClickedOptionIndex(idx);
+    setAnswered(true);
+
+    const isOptionCorrect = shuffledOptions[idx].isCorrect;
+    
+    // Trigger instant responsive feedback sound
+    if (isOptionCorrect) {
+      playSound('correct');
+      if (quizMode === 'practice') {
+        setPracticeCorrectCount((prev) => prev + 1);
+      }
+    } else {
+      playSound('incorrect');
+    }
+    
+    if (quizMode === 'practice') {
+      setPracticeTotalCount((prev) => prev + 1);
+    }
+
+    if (quizMode === 'exam') {
+      const currentQ = examQuestions[examIndex];
+      const selectedOpt = shuffledOptions[idx];
+      const correctOpt = shuffledOptions.find((o) => o.isCorrect);
+
+      setExamAnswers((prev) => [
+        ...prev,
+        {
+          questionId: currentQ.id,
+          questionText: currentQ.question,
+          selectedOptionText: selectedOpt.text,
+          correctOptionText: correctOpt?.text || '',
+          isCorrect: selectedOpt.isCorrect,
+          explanation: currentQ.explanation
+        }
+      ]);
+
+      // Move forward automatically after 1200ms for Exam conditions
+      setTimeout(() => {
+        advanceExam();
+      }, 1200);
+    }
+  };
+
+  // Timeout triggers automatically when timer runs to 0 on Exam
+  const handleExamTimeout = () => {
+    if (answered) return;
+    playSound('incorrect'); // play buzz tone on timeout
+
+    setClickedOptionIndex(-1);
+    setAnswered(true);
+
+    const currentQ = examQuestions[examIndex];
+    const correctOpt = shuffledOptions.find((o) => o.isCorrect);
+
+    setExamAnswers((prev) => [
+      ...prev,
+      {
+        questionId: currentQ.id,
+        questionText: currentQ.question,
+        selectedOptionText: '[Zeit abgelaufen ⏱️]',
+        correctOptionText: correctOpt?.text || '',
+        isCorrect: false,
+        explanation: currentQ.explanation
+      }
+    ]);
+
+    setTimeout(() => {
+      advanceExam();
+    }, 1200);
+  };
+
+  const advanceExam = () => {
+    setAnswered(false);
+    setClickedOptionIndex(null);
+
+    if (examIndex < examQuestions.length - 1) {
+      const nextIdx = examIndex + 1;
+      setExamIndex(nextIdx);
+
+      const nextQ = examQuestions[nextIdx];
+      setCurrentQuestion(nextQ);
+      setShuffledOptions(mapAndShuffleOptions(nextQ));
+      markAsSeen(nextQ.id);
+
+      // Fetch translation
+      retrieveAiTranslation(nextQ);
+    } else {
+      setScreen('result_screen');
+    }
+  };
+
+  // Exam Countdown clock interval (UTC Milliseconds calculation)
+  useEffect(() => {
+    if (quizMode !== 'exam' || screen !== 'quiz') return;
+
+    const initialLimit = selectedLevel === 'A1' ? 60 : 45;
+    setTimeLeft(initialLimit);
+    startTimeRef.current = Date.now();
+
+    const interval = setInterval(() => {
+      const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const remaining = Math.max(0, initialLimit - elapsedSeconds);
+      setTimeLeft(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        handleExamTimeout();
+      }
+    }, 250);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [examIndex, screen, quizMode, selectedLevel]);
+
+  // Back home behavior
+  const handleGoHome = () => {
+    setScreen('level_select');
+    setPracticeCorrectCount(0);
+    setPracticeTotalCount(0);
+  };
+
+  // Calculate progress metric values
+  const getSessionProgressPercent = () => {
+    if (quizMode === 'exam') {
+      return ((examIndex + 1) / EXAM_SIZE) * 100;
+    }
+    const currentPool = getFilteredQuestionsPool(selectedLevel, selectedCategory);
+    const seenCount = seenQuestionIds.filter(id => currentPool.some(q => q.id === id)).length;
+    const totalCount = Math.max(1, currentPool.length);
+    return (seenCount / totalCount) * 100;
+  };
+
+  // Return categories that contain at least one question for the chosen level
+  const availableCategories = Object.keys(CATEGORIES).filter(catKey => {
+    if (catKey === 'all') return true;
+    return allQuestions.some(q => q.level === selectedLevel && getQuestionCategory(q) === catKey);
+  });
+
+  // Typography scaling helpers optimized for older senior German readers (with larger, phone-responsive defaults)
+  const getQuestionTextSizeClass = () => {
+    if (textSize === 'groß') return 'text-2xl md:text-3xl';
+    if (textSize === 'extra-groß') return 'text-3xl md:text-4xl';
+    return 'text-xl md:text-2xl'; // Enhanced default for senior legibility on phones
+  };
+
+  const getBodyTextSizeClass = () => {
+    if (textSize === 'groß') return 'text-lg md:text-xl';
+    if (textSize === 'extra-groß') return 'text-xl md:text-2xl';
+    return 'text-base md:text-lg'; // Enhanced default for senior legibility on phones
+  };
+
+  const getSubtleTextSizeClass = () => {
+    if (textSize === 'groß') return 'text-base md:text-lg';
+    if (textSize === 'extra-groß') return 'text-lg md:text-xl';
+    return 'text-sm md:text-base'; // Enhanced default for senior legibility on phones
+  };
+
+  function getIconFromKey(iconName: string) {
+    switch (iconName) {
+      case 'GraduationCap': return <GraduationCap className="w-6 h-6 text-emerald-600 shrink-0" />;
+      case 'BookOpen': return <BookOpen className="w-6 h-6 text-emerald-600 shrink-0" />;
+      case 'Clock': return <Clock className="w-6 h-6 text-emerald-600 shrink-0" />;
+      case 'Award': return <Award className="w-6 h-6 text-emerald-600 shrink-0" />;
+      case 'Check': return <Check className="w-6 h-6 text-emerald-600 shrink-0" />;
+      case 'Info': return <Info className="w-6 h-6 text-emerald-600 shrink-0" />;
+      case 'HelpCircle': return <HelpCircle className="w-6 h-6 text-emerald-600 shrink-0" />;
+      default: return <Sparkles className="w-6 h-6 text-emerald-600 shrink-0" />;
+    }
+  }
 
   return (
-    <div
-      className={`min-h-screen transition-all duration-350 p-3 sm:p-6 md:p-8 flex flex-col font-sans ${activeTheme.cssClass}`}
-    >
-      {/* GLOBAL WATERMARK HEADER & NAVIGATION BAR */}
-      <header 
-        className={`max-w-6xl w-full mx-auto mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 transition-all duration-300 ${
-          isN
-            ? 'bg-white rounded-[24px] border-4 border-[#4D3B3B] shadow-[6px_6px_0px_#4D3B3B]'
-            : 'bg-white/90 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-md shadow-slate-100/30'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          {/* Italian Republic Official-Style integration emblem */}
-          <div 
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all relative shrink-0 border-2 overflow-hidden ${
-              isN
-                ? 'border-[#4D3B3B] bg-white shadow-[3px_3px_0px_#4D3B3B]'
-                : 'border-slate-200 bg-white shadow-sm'
-            }`}
-          >
-            {/* Elegant SVG Italian integration badge with Italian flags and gold laurel */}
-            <svg viewBox="0 0 100 100" className="w-12 h-12 relative z-10">
-              {/* Background Italian Flag Tricolor Stripes */}
-              <rect x="0" y="0" width="34" height="100" fill="#009246" />
-              <rect x="34" y="0" width="32" height="100" fill="#FAFAFA" />
-              <rect x="66" y="0" width="34" height="100" fill="#CE2B37" />
-              
-              {/* Overlay White/Gold Circle for legibility */}
-              <circle cx="50" cy="50" r="32" fill="#FFFFFF" stroke="#FFC107" strokeWidth="3" />
-              
-              {/* Laurel Wreath */}
-              <path d="M 32,58 C 22,50 20,34 32,22 C 32,27 26,38 32,52" fill="#FFA000" opacity="0.9" />
-              <path d="M 68,58 C 78,50 80,34 68,22 C 68,27 74,38 68,52" fill="#FFA000" opacity="0.9" />
-              
-              {/* Monogram IT / Course insignia */}
-              <text x="50" y="58" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="24" fill="#1A202C" textAnchor="middle" letterSpacing="-1">IT</text>
-              <text x="50" y="73" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="11" fill="#009246" textAnchor="middle" letterSpacing="0.5">A1•A2</text>
-            </svg>
-            
-            {/* Minimal golden thread outline */}
-            <div className="absolute inset-0.5 border border-amber-300 rounded-xl pointer-events-none opacity-40" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className={`text-[10px] font-black uppercase tracking-wider font-mono ${isN ? 'text-[#4D3B3B]/80' : 'text-[#6C5CE7]'}`}>
-                Italien-Integrationskurs
-              </span>
-              <span 
-                className={`px-1.5 py-0.1 text-[9px] font-black rounded uppercase ${
-                  isN
-                    ? 'bg-[#E1F5FE] text-[#4D3B3B] border-2 border-[#4D3B3B]'
-                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                }`}
-              >
-                A1-A2 Syllabus
-              </span>
+    <div className="flex-1 flex flex-col justify-between max-w-4xl w-full mx-auto p-4 md:p-8 min-h-screen bg-[#F4FAF6] text-slate-900 border-x-4 border-emerald-600">
+      
+      {/* ACCESS PRECISE STYLINGS & UPPER DECK BRAND HEADER */}
+      <header className="py-4 mb-4 border-b-2 border-emerald-500">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#009246] via-[#FFD100] to-[#ce2b37] p-[3px] flex items-center justify-center shrink-0 shadow-md">
+              <div className="w-full h-full bg-white rounded-[9px] flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-[#009246]" />
+              </div>
             </div>
-            <h1 className={`text-lg sm:text-2xl font-black tracking-tight flex items-center gap-2 ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>
-              Italienisch-Integrationsportal
-            </h1>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 id="brand-title" className="text-2xl font-black text-slate-900 tracking-tight">{t('app.title')}</h1>
+                <ItalianFlag size="md" />
+              </div>
+              <p className="text-xs text-slate-500 font-bold">{t('app.subtitle')}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* SENIOR ACCESSIBILITY ASSISTANCE PANEL TOGGLER */}
+            <button
+              onClick={() => {
+                playSound('click');
+                setShowAccessibilityPanel(!showAccessibilityPanel);
+              }}
+              title="Bedienungshilfe & Schriftgröße"
+              className={`p-2 rounded-xl border transition-all flex items-center gap-2 cursor-pointer text-xs font-bold ${
+                showAccessibilityPanel 
+                  ? 'bg-emerald-100 border-emerald-400 text-emerald-900 shadow-sm'
+                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+              }`}
+            >
+              <Settings className="w-4 h-4 text-emerald-700 animate-spin-hover" />
+              <span className="hidden sm:inline">Bedienungshilfe (A+)</span>
+            </button>
+            <div className="h-3 w-3 rounded-full bg-[#009246] animate-pulse" title="Satzdatenbank Synchronisiert"></div>
           </div>
         </div>
 
-        {/* Customized link as OlamGeorg Creator Badge */}
-        <div 
-          className={`flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 ${
-            isN ? 'border-t-4 sm:border-t-0 border-[#4D3B3B]' : 'border-t sm:border-t-0 border-slate-100'
-          }`}
-        >
-          <a
-            id="curator-link-olamgeorg"
-            href="https://github.com/OlamGeorg"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-all text-center select-none ${
-              isN
-                ? 'bg-white rounded-full border-4 border-[#4D3B3B] text-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:translate-y-0.5 hover:shadow-none'
-                : 'bg-slate-50 hover:bg-slate-100 rounded-full border border-slate-200 text-slate-600 hover:scale-[1.02] active:scale-[0.98]'
-            }`}
-          >
-            <span>Studien-Leitung:</span>
-            <span className={`underline font-black font-sans ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>OlamGeorg</span>
-          </a>
+        {/* ACCESSIBILITY PANEL CONTENT (Tailored for Seniors) */}
+        {showAccessibilityPanel && (
+          <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-4 animate-slideDown">
+            <div className="flex items-center gap-2 border-b border-emerald-200/50 pb-2">
+              <Sparkles className="w-4 h-4 text-emerald-700 fill-emerald-100" />
+              <h3 className="text-xs font-black uppercase text-emerald-950 tracking-wider">Altengerechte Bedienungshilfen & Einstellungen</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Size Modifier Option Buttons */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-emerald-900 block">Optimale Schriftgröße für leichtes Lesen:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['normal', 'groß', 'extra-groß'] as const).map((sz) => (
+                    <button
+                      key={sz}
+                      onClick={() => {
+                        playSound('click');
+                        setTextSize(sz);
+                      }}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                        textSize === sz
+                          ? 'bg-emerald-700 border-emerald-700 text-white shadow-sm'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      {sz === 'normal' && 'Normal (A)'}
+                      {sz === 'groß' && 'Groß (A+)'}
+                      {sz === 'extra-groß' && 'Sehr Groß (A++)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <AudioToggle onToggle={handleAudioToggle} muted={audioMuted} designStyle={designStyle} />
-        </div>
+              {/* Speech Rates speed customization buttons */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-emerald-900 block">Sprechgeschwindigkeit des Vorlesers (IT):</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[[0.9, 'Normal'], [0.75, 'Langsam'], [0.6, 'Deutlich']].map(([rate, label]) => (
+                    <button
+                      key={rate as number}
+                      onClick={() => {
+                        playSound('click');
+                        setSpeechRate(rate as number);
+                      }}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                        speechRate === rate
+                          ? 'bg-emerald-700 border-emerald-700 text-white shadow-sm'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      {label as string}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* THREE TABS TOP-LEVEL COMPASS SYSTEM FOR MOBILES (FULL WIDTH BUTTON STACK ON SMALL, INLINE ROW ON DESKTOP) */}
-      {activeTab !== 'quiz_session' && (
-        <nav className="max-w-6xl w-full mx-auto mb-6">
-          <div 
-            className={`grid grid-cols-1 sm:grid-cols-3 gap-3 p-2 transition-all duration-305 ${
-              isN
-                ? 'bg-[#FFF8E1] rounded-[24px] border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B]'
-                : 'bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/50 shadow-sm'
-            }`}
-          >
-            <button
-              id="nav-tab-main"
-              onClick={() => setActiveTab('main')}
-              className={`w-full py-3.5 px-4 font-black text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                isN
-                  ? `rounded-xl border-4 ${
-                      activeTab === 'main'
-                        ? 'bg-[#4ECDC4] border-[#4D3B3B] text-white shadow-[4px_4px_0px_#4D3B3B] -translate-y-0.5'
-                        : 'border-transparent text-[#4D3B3B] hover:bg-white/50'
-                    }`
-                  : `rounded-xl ${
-                      activeTab === 'main'
-                        ? 'bg-[#6C5CE7] text-white font-extrabold shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'
-                    }`
-              }`}
-            >
-              <Play className="w-5 h-5 fill-current" /> Start-Zentrale
-            </button>
-
-            <button
-              id="nav-tab-review"
-              onClick={() => setActiveTab('review')}
-              className={`w-full py-3.5 px-4 font-black text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer relative ${
-                isN
-                  ? `rounded-xl border-4 ${
-                      activeTab === 'review'
-                        ? 'bg-[#FF6B6B] border-[#4D3B3B] text-white shadow-[4px_4px_0px_#4D3B3B] -translate-y-0.5'
-                        : 'border-transparent text-[#4D3B3B] hover:bg-white/50'
-                    }`
-                  : `rounded-xl ${
-                      activeTab === 'review'
-                        ? 'bg-rose-500 text-white font-extrabold shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'
-                    }`
-              }`}
-            >
-              <BookOpenCheck className="w-5 h-5" /> Fehler-Merkliste
-              {stats.incorrectQuestionIds.length > 0 && (
-                <span 
-                  className={`absolute top-1.5 right-3 px-2 py-0.5 text-[10px] font-black rounded-full animate-bounce ${
-                    isN
-                      ? 'bg-[#FFD93D] text-[#4D3B3B] border-2 border-[#4D3B3B] shadow-[1px_1px_0px_#4D3B3B]'
-                      : 'bg-rose-100 text-rose-700 border border-rose-200'
-                  }`}
-                >
-                  {stats.incorrectQuestionIds.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              id="nav-tab-stats"
-              onClick={() => setActiveTab('stats')}
-              className={`w-full py-3.5 px-4 font-black text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                isN
-                  ? `rounded-xl border-4 ${
-                      activeTab === 'stats'
-                        ? 'bg-[#6C5CE7] border-[#4D3B3B] text-white shadow-[4px_4px_0px_#4D3B3B] -translate-y-0.5'
-                        : 'border-transparent text-[#4D3B3B] hover:bg-white/50'
-                    }`
-                  : `rounded-xl ${
-                      activeTab === 'stats'
-                        ? 'bg-emerald-500 text-white font-extrabold shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-800'
-                    }`
-              }`}
-            >
-              <Trophy className="w-5 h-5" /> Statistiken & Fortschritt
-            </button>
+      {/* VIEWPORT BODY DECK */}
+      <main className="flex-1 flex flex-col justify-center py-2" id="main-deck">
+        
+        {screen === 'loading' && (
+          <div className="text-center py-16 space-y-4">
+            <div className="relative w-14 h-14 mx-auto">
+              <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-t-[#009246] animate-spin"></div>
+            </div>
+            <p className="text-slate-600 text-base font-bold animate-pulse">Lade didaktische Fragendatenbank... Bitte warten.</p>
           </div>
-        </nav>
-      )}
+        )}
 
-      {/* CORE DISPLAY ROUTER VIEWS */}
-      <main className="max-w-6xl w-full mx-auto flex-1 flex flex-col justify-center">        {activeTab === 'main' && (
-          <div className="space-y-6">
-            {/* WELCOME BANNER SCREEN */}
-            <div 
-              className={`p-6 sm:p-10 space-y-6 text-center sm:text-left transition-all duration-300 ${
-                isN 
-                  ? 'bg-white border-4 border-[#4D3B3B] rounded-[32px] shadow-[8px_8px_0px_#4D3B3B] text-[#4D3B3B]' 
-                  : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-xl text-slate-800'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
-                <div className="space-y-4 flex-1">
-                  <span 
-                    className={`inline-block px-3 py-1 text-xs font-black font-mono rounded-full uppercase ${
-                      isN 
-                        ? 'bg-[#FFF8E1] text-[#4D3B3B] border-2 border-[#4D3B3B] shadow-[1.5px_1.5px_0px_#4D3B3B]' 
-                        : 'bg-indigo-50 text-indigo-750'
-                    }`}
-                  >
-                    Offizieller Lehrplan (Italienischer Integrationstest)
-                  </span>
-                  <h2 className={`text-2xl sm:text-5xl font-black tracking-tight leading-none ${isN ? 'text-[#4D3B3B]' : 'text-slate-850'}`}>
-                    Meistern Sie Italienisch <br className="hidden sm:inline" /> für die Niveaus A1 & A2!
-                  </h2>
-                  <p className={`text-base sm:text-lg leading-relaxed max-w-2xl font-bold ${isN ? 'text-[#4D3B3B]/95' : 'text-slate-600'}`}>
-                    Bereiten Sie sich auf soziale Interaktionen, Grammatikfeinheiten und bürgerliche Pflichten
-                    in ganz Italien vor. Entwickelt für deutschsprachige Lerner mit authentischen Fragen.
-                  </p>
-                </div>
-                
-                <div 
-                  className={`p-6 rounded-[24px] hidden lg:block shrink-0 select-none transition-all duration-300 ${
-                    isN 
-                      ? 'bg-[#FFD93D] text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B]' 
-                      : 'bg-slate-50 border border-slate-200 shadow-inner'
-                  }`}
-                >
-                  <div className="text-center">
-                    <span className={`text-[10px] font-mono tracking-wider uppercase font-black block ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-400'}`}>Fragen im Pool</span>
-                    <span className={`text-5xl font-black font-mono ${isN ? 'text-[#4D3B3B]' : 'text-indigo-650'}`}>{activePoolCount}</span>
-                    <span className={`text-xs font-black block mt-1 ${isN ? 'text-[#4D3B3B]' : 'text-slate-500'}`}>100% Akkreditiert</span>
-                  </div>
-                </div>
+        {/* SCREEN 1: LEVEL SELECTION */}
+        {screen === 'level_select' && (
+          <div className="space-y-6 max-w-2xl mx-auto w-full animate-fadeIn" id="screen-level-select">
+            <div className="text-center space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800">
+                <Sparkles className="w-3.5 h-3.5" /> Amici d'Italia • Sprachkurs
               </div>
-
-              {/* GRAMMATIK KATEGORIE WÄHLEN - 4 MAIN BUTTONS */}
-              <div
-                className={`p-6 rounded-[28px] space-y-4 transition-all duration-300 ${
-                  isN
-                    ? 'bg-slate-50 border-4 border-[#4D3B3B]'
-                    : 'bg-slate-50/60 border border-slate-150'
-                }`}
-              >
-                <div>
-                  <h3 className="text-lg sm:text-2xl font-black uppercase tracking-tight flex items-center gap-2">
-                    <span>✍️</span> Grammatik-Thema wählen:
-                  </h3>
-                  <p className={`text-xs sm:text-sm font-bold leading-normal mt-1 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
-                    Wählen Sie eine der vier grammatikalischen Säulen aus, um sofort gezielte Übungen mit verständlichen Erklärungen zu starten.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { id: 'Verben', label: 'Verben', icon: '⚡', desc: 'Presente, Passato Prossimo, Imperfetto, Futuro, Condizionale' },
-                    { id: 'Nomen', label: 'Nomen', icon: '🏷️', desc: 'Sg./Pl., Genusvereinbarung, unregelmäßige Endungen' },
-                    { id: 'Präpositionen', label: 'Präpositionen', icon: '📍', desc: 'Semplici & articolate für Ort, Zeit und Bewegung' },
-                    { id: 'Artikel', label: 'Artikel', icon: '🔍', desc: 'Bestimmt und unbestimmt nach phonetischen Regeln' }
-                  ].map((cat) => {
-                    const count = QUESTIONS.filter(q => q.section === cat.id).length;
-                    return (
-                      <button
-                        key={cat.id}
-                        onClick={() => handleStartCategoryQuiz(cat.id)}
-                        className={`p-5 rounded-2xl text-left transition-all duration-300 cursor-pointer flex flex-col justify-between lg:min-h-[170px] select-none h-full group ${
-                          isN
-                            ? 'bg-white text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B] hover:translate-y-0.5 hover:shadow-[1px_1px_0px_#4D3B3B]'
-                            : 'bg-white text-slate-750 border border-slate-200 hover:border-slate-350 hover:shadow-lg hover:scale-[1.02]'
-                        }`}
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-3xl select-none">{cat.icon}</span>
-                            <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded ${
-                              isN ? 'bg-[#FFF8E1] border-2 border-[#4D3B3B]' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {count} Fragen
-                            </span>
-                          </div>
-                          
-                          <h4 className={`text-lg sm:text-xl font-black group-hover:text-amber-500 transition-colors ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>
-                            {cat.label}
-                          </h4>
-                          
-                          <p className={`text-xs leading-relaxed font-semibold line-clamp-2 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
-                            {cat.desc}
-                          </p>
-                        </div>
-
-                        <span className={`text-xs font-black uppercase tracking-wider font-mono mt-4 flex items-center gap-1 group-hover:underline ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>
-                          Lernen starten →
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* CORE MODE SELECTOR FOR DRILLS: Vertically stacked on mobile, full width buttons */}
-              <div 
-                className={`grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 ${
-                  isN ? 'border-t-4 border-[#4D3B3B]' : 'border-t border-slate-100'
-                }`}
-              >
-                {/* PRACTICE MODE CARD */}
-                <div 
-                  className={`p-6 space-y-4 hover:translate-y-0.5 hover:shadow-none transition-all flex flex-col justify-between ${
-                    isN 
-                      ? 'bg-[#E8F5E9] rounded-[24px] border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B]' 
-                      : 'bg-emerald-50/40 rounded-3xl border border-emerald-100'
-                  }`}
-                >
-                  <div className="space-y-2 text-center sm:text-left">
-                    <div 
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                        isN 
-                          ? 'bg-[#4ECDC4] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] mx-auto sm:mx-0' 
-                          : 'bg-teal-500 text-white shadow-sm shadow-teal-200 mx-auto sm:mx-0'
-                      }`}
-                    >
-                      <BookOpen className="w-5 h-5 stroke-[2]" />
-                    </div>
-                    <h3 className={`text-xl sm:text-2xl font-black ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>Unbegrenzter Übungsmodus</h3>
-                    <p className={`text-sm sm:text-base font-semibold leading-normal ${isN ? 'text-[#4D3B3B]/85' : 'text-slate-600'}`}>
-                      Lernen Sie im eigenen Tempo. Erhalten Sie sofortiges deutsches Feedback und verständliche
-                      Erklärungen zu jeder Antwort. Perfekt zum Vertiefen.
-                    </p>
-                  </div>
-
-                  <button
-                    id="btn-trigger-practice"
-                    onClick={handleStartGeneralPractice}
-                    className={`cursor-pointer w-full py-4 font-black rounded-2xl flex items-center justify-center gap-2 text-base sm:text-lg transition-all ${
-                      isN
-                        ? 'bg-[#4ECDC4] text-white border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B]'
-                        : 'bg-teal-500 hover:bg-[#3dbdb5] text-white shadow-md shadow-teal-500/10 hover:scale-[1.01] active:scale-[0.99] border-0'
-                    }`}
-                  >
-                    Übungsquiz starten (10 Fragen)
-                  </button>
-                </div>
-
-                {/* EXAM SIMULATION CARD */}
-                <div 
-                  className={`p-6 space-y-4 hover:translate-y-0.5 hover:shadow-none transition-all flex flex-col justify-between ${
-                    isN 
-                      ? 'bg-[#FFF5F5] rounded-[24px] border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B]' 
-                      : 'bg-rose-50/40 rounded-3xl border border-rose-100'
-                  }`}
-                >
-                  <div className="space-y-2 text-center sm:text-left">
-                    <div 
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                        isN 
-                          ? 'bg-[#FF6B6B] text-white border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] mx-auto sm:mx-0' 
-                          : 'bg-rose-500 text-white shadow-sm shadow-rose-200 mx-auto sm:mx-0'
-                      }`}
-                    >
-                      <Clock className="w-5 h-5 stroke-[2]" />
-                    </div>
-                    <h3 className={`text-xl sm:text-2xl font-black ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>Offizielle Prüfungssimulation</h3>
-                    <p className={`text-sm sm:text-base font-semibold leading-normal ${isN ? 'text-[#4D3B3B]/85' : 'text-slate-600'}`}>
-                      Simulieren Sie den echten A1-A2 Integrations- und Einbürgerungstest. 20 zufällige Fragen,
-                      15-Minuten-Zeitlimit, Auswertung am Ende.
-                    </p>
-                  </div>
-
-                  <button
-                    id="btn-trigger-exam"
-                    onClick={handleStartExamSimulation}
-                    className={`cursor-pointer w-full py-4 font-black rounded-2xl flex items-center justify-center gap-2 text-base sm:text-lg transition-all ${
-                      isN
-                        ? 'bg-[#FF6B6B] border-4 border-[#4D3B3B] text-white shadow-[4px_4px_0px_#4D3B3B]'
-                        : 'bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/10 hover:scale-[1.01] active:scale-[0.99] border-0'
-                    }`}
-                  >
-                    Prüfungssimulation beginnen (A1-A2)
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* ERROR STUDY LINK REDIRECT IN MAIN MENUS */}
-            {stats.incorrectQuestionIds.length > 0 && (
-              <div 
-                className={`p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-300 ${
-                  isN 
-                    ? 'bg-[#FFF5F5] border-4 border-[#4D3B3B] rounded-[24px] shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B]' 
-                    : 'bg-rose-50/80 border border-rose-200/50 rounded-2xl shadow-sm text-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div 
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-black animate-pulse ${
-                      isN 
-                        ? 'bg-[#FF6B6B] text-white border-2 border-[#4D3B3B]' 
-                        : 'bg-rose-500 text-white'
-                    }`}
-                  >
-                    !
-                  </div>
-                  <div>
-                    <h4 className={`font-extrabold text-base sm:text-lg ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>Gezielte Schwächen-Behandlung:</h4>
-                    <p className={`text-sm sm:text-base font-bold ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-600'}`}>
-                      Sie haben derzeit {stats.incorrectQuestionIds.length} fälschlicherweise beantwortete Fragen in Ihrer Lernliste.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  id="btn-main-start-remedial"
-                  onClick={handleStartRemedialQuiz}
-                  className={`cursor-pointer font-black px-6 py-3.5 rounded-2xl text-sm sm:text-base transition-all w-full sm:w-auto text-center ${
-                    isN 
-                      ? 'bg-[#FF6B6B] text-white border-4 border-[#4D3B3B] shadow-[3px_3px_0px_#4D3B3B] hover:translate-y-0.5 hover:shadow-none' 
-                      : 'bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-550/10 hover:scale-[1.01]'
-                  }`}
-                >
-                  Fehlertraining starten
-                </button>
-              </div>
-            )}
-
-            {/* THEME SELECTOR CONTAINER (VIBRANT PALETTE REQS) */}
-            <ThemeSelector 
-              currentThemeId={currentThemeId} 
-              onSelectTheme={handleSelectTheme} 
-              designStyle={designStyle}
-              onSelectDesignStyle={handleSelectDesignStyle}
-            />
-
-            {/* PWA INSTALLATION CENTER */}
-            <div 
-              className={`p-6 transition-all duration-300 space-y-6 ${
-                isN 
-                  ? 'bg-white border-4 border-[#4D3B3B] rounded-[24px] shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B]' 
-                  : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-md text-slate-800'
-              }`}
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <span className={`text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest block ${isN ? 'text-[#FF6B6B]' : 'text-indigo-650'}`}>
-                    App-Installation (PWA)
-                  </span>
-                  <h3 className="text-xl sm:text-3xl font-black flex items-center gap-2">
-                    📲 App auf Startbildschirm installieren
-                  </h3>
-                  <p className={`text-xs sm:text-sm font-bold mt-1 ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
-                    Nutzen Sie diese Anwendung wie eine native App! Vollständig offline-fähig für optimales Lernen auf Zugreisen, Flügen oder ländlichen Gebieten auf iOS, Android, macOS & Windows.
-                  </p>
-                </div>
-
-                <div className="shrink-0 w-full md:w-auto">
-                  <button
-                    onClick={handleInstallPWA}
-                    className={`w-full md:w-auto py-3.5 px-6 font-black rounded-xl text-center cursor-pointer transition-all uppercase tracking-wide text-xs sm:text-sm flex items-center justify-center gap-2 ${
-                      isN
-                        ? 'bg-[#FFD93D] text-[#4D3B3B] border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] hover:-translate-y-0.5 active:translate-y-0'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/10 font-bold'
-                    }`}
-                  >
-                    <Smartphone className="w-4 h-4" /> App jetzt installieren
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* THEMATIC SUMMARY OF Italian Syllabus Course info */}
-            <div className="bg-white border-4 border-[#4D3B3B] rounded-[24px] p-6 shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B] space-y-4">
-              <h3 className="text-lg sm:text-2xl font-black flex items-center gap-2">
-                <GraduationCap className="w-6 h-6 text-[#FFD93D] fill-[#FFD93D] stroke-[2.5]" />
-                Inhalte des A1 & A2 Integrationskurses (Syllabus)
-              </h3>
-              <p className="text-sm sm:text-base text-[#4D3B3B]/85 leading-relaxed font-bold">
-                Der Kurs entspricht den Richtlinien des italienischen Innenministeriums für den Nachweis von Sprachkenntnissen
-                gemäß dem Integrationsabkommen (Accordo di Integrazione). Es wird ein fundiertes Verständnis der sozialen Gegebenheiten gefordert:
+              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-950">
+                {t('home.welcome')}
+              </h2>
+              <p className="text-slate-600 font-bold text-sm md:text-base">
+                {t('home.select_level')}
               </p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                <div className="p-4 bg-[#FFF8E1] rounded-xl border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] text-xs space-y-1">
-                  <p className="font-black text-[#FF6B6B] uppercase text-sm">1. Wortschatz (Vocabolario)</p>
-                  <p className="text-[#4D3B3B] font-extrabold leading-normal">Reisegespräche, Essen, Uhrzeiten, Familie, wichtige Verkehrs- & Wegbeschreibungen.</p>
-                </div>
-                <div className="p-4 bg-[#E8F5E9] rounded-xl border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] text-xs space-y-1">
-                  <p className="font-black text-[#4ECDC4] uppercase text-sm">2. Grammatik (Grammatica)</p>
-                  <p className="text-[#4D3B3B] font-extrabold leading-normal">Hilfsverben (essere/avere), Reflexivpronomina, direkte Satzpronomina, passato prossimo Präteritum.</p>
-                </div>
-                <div className="p-4 bg-[#E1F5FE] rounded-xl border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] text-xs space-y-1">
-                  <p className="font-black text-[#2196F3] uppercase text-sm">3. Alltagsgespräche (Dialoghi)</p>
-                  <p className="text-[#4D3B3B] font-extrabold leading-normal">Arztgepflogenheiten, administrative Amtsgänge, Höflichkeitscodices (dare del Lei) und Einkaufen.</p>
-                </div>
-                <div className="p-4 bg-[#F3E5F5] rounded-xl border-4 border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B] text-xs space-y-1">
-                  <p className="font-black text-[#6C5CE7] uppercase text-sm">4. Bürgerkunde (Civiltà)</p>
-                  <p className="text-[#4D3B3B] font-extrabold leading-normal">Nutzung von Codice Fiscale, Tessera Sanitaria, Steuerpflichten, Verfassungsrecht und Meldeämter.</p>
-                </div>
-              </div>
             </div>
 
-            {/* GEORG.EDU SUPPORT & CONTACT SECTION */}
-            <div 
-              className={`p-6 sm:p-8 transition-all duration-300 ${
-                isN 
-                  ? 'bg-white border-4 border-[#4D3B3B] rounded-[24px] shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B]' 
-                  : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-md'
-              }`}
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* A1 / A2 SELECTION BUTTONS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <button
+                id="btn-level-a1"
+                onClick={() => {
+                  playSound('click');
+                  setSelectedLevel('A1');
+                  setSelectedCategory('all');
+                  setScreen('category_select');
+                }}
+                className="group p-6 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-lg rounded-2xl text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[180px] shadow-sm"
+              >
                 <div className="space-y-2">
-                  <span className={`text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest block ${isN ? 'text-[#FF6B6B]' : 'text-indigo-650'}`}>
-                    Offizieller Support & Studien-Zentrum
-                  </span>
-                  <h3 className="text-xl sm:text-3xl font-black">
-                    Italiano App Supportcenter
+                  <div className="flex justify-between items-center">
+                    <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-black text-xl group-hover:bg-[#009246] group-hover:text-white transition-colors shadow-inner">
+                      A1
+                    </div>
+                    <ItalianFlag size="sm" />
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                    {t('home.level_a1')} (Anfänger)
                   </h3>
-                  <p className={`text-xs sm:text-sm font-bold max-w-xl ${isN ? 'text-[#4D3B3B]/80' : 'text-slate-500'}`}>
-                    Haben Sie Fragen zum Integrationsabkommen, zu den Sprachniveaus A1 oder A2 oder sonstige Anfragen? 
-                    Unser Support betreut Sie gerne telefonisch oder per E-Mail.
+                  <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                    Einführung & Grundfertigkeiten. Bestimmte Artikel, einfache Hilfsverben im Präsens, Uhrzeit-Wochentage-Set und Vokabular für Reise und Begrüßungen.
                   </p>
                 </div>
+                <div className="text-xs font-black text-emerald-800 flex items-center gap-1 mt-4 group-hover:translate-x-1 transition-transform">
+                  Module ansehen <ArrowRight className="w-4 h-4" />
+                </div>
+              </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
-                  {/* Telefonische Unterstützung */}
-                  <a 
-                    href="tel:09134088925"
-                    className={`p-4 rounded-xl flex items-center gap-3 transition-all cursor-pointer select-none border-2 hover:-translate-y-0.5 active:translate-y-0 ${
-                      isN
-                        ? 'bg-[#E1F5FE] border-[#4D3B3B] text-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
-                        : 'bg-indigo-50/50 border border-indigo-100 hover:bg-indigo-50 text-indigo-700 font-bold'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-lg ${isN ? 'bg-white border-2 border-[#4D3B3B]' : 'bg-indigo-100'}`}>
-                      <Phone className="w-5 h-5 text-indigo-600" />
+              <button
+                id="btn-level-a2"
+                onClick={() => {
+                  playSound('click');
+                  setSelectedLevel('A2');
+                  setSelectedCategory('all');
+                  setScreen('category_select');
+                }}
+                className="group p-6 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-lg rounded-2xl text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[180px] shadow-sm"
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-850 flex items-center justify-center font-black text-xl group-hover:bg-[#009246] group-hover:text-white transition-colors shadow-inner">
+                      A2
                     </div>
-                    <div>
-                      <span className="text-[9px] uppercase font-mono font-black text-slate-500 block">Kontakt-Tel.</span>
-                      <span className="text-xs sm:text-sm font-extrabold tracking-wide">09134088925</span>
+                    <div className="flex gap-1">
+                      <ItalianFlag size="sm" />
                     </div>
-                  </a>
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                    {t('home.level_a2')} (Fortgeschrittene)
+                  </h3>
+                  <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                    Fortgeschrittene Grammatik. Das Passato Prossimo, reflexiv & direkte Pronomen, unregelmäßige Futurstudien, zusammengesetzte Präpositionen und Alltagssätze.
+                  </p>
+                </div>
+                <div className="text-xs font-black text-emerald-800 flex items-center gap-1 mt-4 group-hover:translate-x-1 transition-transform">
+                  Module ansehen <ArrowRight className="w-4 h-4" />
+                </div>
+              </button>
+            </div>
 
-                  {/* E-Mail Unterstützung */}
-                  <a 
-                    href="mailto:olamgeorg9@gmail.com"
-                    className={`p-4 rounded-xl flex items-center gap-3 transition-all cursor-pointer select-none border-2 hover:-translate-y-0.5 active:translate-y-0 ${
-                      isN
-                        ? 'bg-[#FFF8E1] border-[#4D3B3B] text-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
-                        : 'bg-amber-50/50 border border-amber-100 hover:bg-amber-50 text-amber-900 font-bold'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-lg ${isN ? 'bg-white border-2 border-[#4D3B3B]' : 'bg-amber-100'}`}>
-                      <Mail className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <span className="text-[9px] uppercase font-mono font-black text-slate-500 block">E-Mail Kontakt</span>
-                      <span className="text-xs sm:text-sm font-extrabold tracking-wide">olamgeorg9@gmail.com</span>
-                    </div>
-                  </a>
+            {/* PWA INSTALLATION ADVICE BLOCK */}
+            <div id="pwa-guide-card" className="bg-gradient-to-br from-emerald-950 to-slate-900 text-white rounded-2xl p-6 shadow-md border border-emerald-800 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-300">
+                  <Smartphone className="w-6 h-6 shrink-0" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-emerald-200">Italiano als App auf Ihrem Gerät installieren</h3>
+                  <p className="text-xs text-slate-300 leading-relaxed mt-1">
+                    Lerne unabhängig von Internet oder mobilem Datenvolumen. Die App startet blitzschnell und ist perfekt auf die Bedürfnisse älterer Lerner abgestimmt.
+                  </p>
                 </div>
               </div>
 
-              {/* Developer Attribution Card */}
-              <div 
-                className={`mt-6 pt-4 border-t-2 text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono font-black ${
-                  isN ? 'border-[#4D3B3B]/10 text-[#4D3B3B]/70' : 'border-slate-100 text-slate-450'
-                }`}
-              >
-                <span>Syllabus-Akkreditierung: App Italiano Nationalportal</span>
-                <span>Entwickelt von: <strong className={`font-sans font-black ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>Olamgeorg</strong></span>
+              {/* Install Trigger Button */}
+              {showInstallBtn && (
+                <button
+                  onClick={triggerNativeInstall}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#009246] hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-xs font-black transition-colors cursor-pointer text-white shadow-sm shadow-emerald-900"
+                >
+                  <Download className="w-4 h-4 animate-bounce" /> Jetzt App laden ("Italiano")
+                </button>
+              )}
+
+              {/* General Manual Installation Instructions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-emerald-800/60 text-xs">
+                <div className="space-y-1 bg-black/10 p-2.5 rounded-xl">
+                  <p className="font-bold text-emerald-300 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Android & Chrome
+                  </p>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Tippe oben rechts im Chrome-Browser auf die <strong className="text-white">drei Punkte (⋮)</strong> und wähle <strong className="text-white">"App installieren"</strong> oder drücke den Installationspfeil in der Suchleiste.
+                  </p>
+                </div>
+                <div className="space-y-1 bg-black/10 p-2.5 rounded-xl">
+                  <p className="font-bold text-emerald-300 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> iPhone/iPad (Safari)
+                  </p>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Tippe unten in der Safari-Steuerung auf das <strong className="text-white">Teilen-Symbol (↑)</strong> und wähle im Menü den Punkt <strong className="text-white">"Zum Home-Bildschirm"</strong> aus.
+                  </p>
+                </div>
               </div>
             </div>
+
+            <p className="text-center text-xs text-slate-400 font-semibold">
+              {t('home.footer_credit')}
+            </p>
           </div>
         )}
 
-        {/* ACTIVE DRILLS SCREEN */}
-        {activeTab === 'quiz_session' && (
-          <QuizSession
-            questions={activeQuestions}
-            mode={activeQuizMode}
-            onFinished={handleQuizFinished}
-            onQuit={() => setActiveTab('main')}
-            designStyle={designStyle}
-          />
-        )}
-
-        {/* INCORRECT ANSWERS REVIEW LIST */}
-        {activeTab === 'review' && (
-          <ReviewList
-            incorrectQuestionIds={stats.incorrectQuestionIds}
-            onStartRemedialQuiz={handleStartRemedialQuiz}
-            onRemoveFromIncorrect={handleRemoveFromIncorrect}
-            designStyle={designStyle}
-          />
-        )}
-
-        {/* DETAILED USER STATS */}
-        {activeTab === 'stats' && (
-          <StatsDashboard
-            stats={stats}
-            totalQuestionsAvailable={QUESTIONS.length}
-            onResetStats={handleResetStats}
-            onSelectTab={setActiveTab}
-            onStartCategoryQuiz={handleStartCategoryQuiz}
-            designStyle={designStyle}
-          />
-        )}
-
-        {/* DETAILED GAME EVALUATION SCREEN (FINISHED SESSION VIEW) */}
-        {activeTab === 'finished_overview' && lastSessionResult && (
-          <div className="space-y-6">
-            {/* Main Score Feedback Card */}
-            <div 
-              className={`p-6 sm:p-8 text-center space-y-6 transition-all duration-305 ${
-                isN 
-                  ? 'bg-white border-4 border-[#4D3B3B] rounded-[24px] shadow-[8px_8px_0px_#4D3B3B] text-[#4D3B3B]' 
-                  : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-xl text-slate-800'
-              }`}
-            >
-              <div className="space-y-2">
-                <span className={`text-xs uppercase font-black tracking-widest font-mono ${isN ? 'text-[#FF6B6B]' : 'text-indigo-600'}`}>
-                  Runde beendet ({lastSessionResult.mode === 'exam' ? 'Prüfungssimulation 📝' : lastSessionResult.mode === 'remedial' ? 'Fehlertraining 📖' : 'Übungsrunde 🎯'})
-                </span>
-                <h2 className={`text-3xl sm:text-5xl font-black tracking-tight ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>Ergebnis-Auswertung</h2>
-              </div>
-
-              {/* Core Radial Score representation */}
-              <div 
-                className={`relative w-40 h-40 rounded-full flex items-center justify-center mx-auto transition-all duration-300 ${
-                  isN 
-                    ? 'bg-white border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B]' 
-                    : 'bg-indigo-50/50 border-2 border-indigo-500/30 shadow-inner'
-                }`}
-              >
-                <div className="text-center">
-                  <span className={`text-5xl font-black font-mono ${isN ? 'text-[#4D3B3B]' : 'text-indigo-650'}`}>
-                    {Math.round((lastSessionResult.correctCount / lastSessionResult.totalQuestions) * 100)}%
-                  </span>
-                  <p className={`text-xs mt-1 font-black ${isN ? 'text-[#4D3B3B]/60' : 'text-slate-500'}`}>
-                    {lastSessionResult.correctCount} von {lastSessionResult.totalQuestions} richtig
-                  </p>
-                </div>
-              </div>
-
-              {/* Pedagogical Rating Translation */}
-              <div className="space-y-2 max-w-lg mx-auto">
-                {Math.round((lastSessionResult.correctCount / lastSessionResult.totalQuestions) * 100) >= 90 ? (
-                  <div 
-                    className={`p-4 rounded-xl transition-all ${
-                      isN 
-                        ? 'bg-[#FFF8E1] border-4 border-[#4D3B3B] shadow-[3px_3px_0px_#4D3B3B]' 
-                        : 'bg-amber-55/60 border border-amber-200 text-amber-900 shadow-sm'
-                    }`}
-                  >
-                    <p className="font-black text-rose-500 text-lg sm:text-xl">Eccellente! Unglaubliche Leistung! 🏆</p>
-                    <p className="text-sm sm:text-base font-bold mt-1 text-inherit">Sie beherrschen die Fragen meisterhaft und sind perfekt für den Integrationstest gerüstet!</p>
-                  </div>
-                ) : Math.round((lastSessionResult.correctCount / lastSessionResult.totalQuestions) * 100) >= 70 ? (
-                  <div 
-                    className={`p-4 rounded-xl transition-all ${
-                      isN 
-                        ? 'bg-[#E8F5E9] border-4 border-[#4D3B3B] shadow-[3px_3px_0px_#4D3B3B]' 
-                        : 'bg-emerald-55/60 border border-emerald-200 text-emerald-900 shadow-sm'
-                    }`}
-                  >
-                    <p className="font-black text-emerald-600 text-lg sm:text-xl">Bestanden! (Promosso) 🟢</p>
-                    <p className="text-sm sm:text-base font-bold mt-1 text-inherit">Sehr gut, Sie erfüllen die offiziell geforderten Kriterien für das Sprachniveau A1/A2!</p>
-                  </div>
-                ) : (
-                  <div 
-                    className={`p-4 rounded-xl transition-all ${
-                      isN 
-                        ? 'bg-[#FFF5F5] border-4 border-[#4D3B3B] shadow-[3px_3px_0px_#4D3B3B]' 
-                        : 'bg-rose-55/60 border border-rose-200 text-rose-900 shadow-sm'
-                    }`}
-                  >
-                    <p className="font-extrabold text-rose-500 text-lg sm:text-xl">Leider nicht bestanden (Ripetere) 🔴</p>
-                    <p className="text-sm sm:text-base font-bold mt-1 text-inherit">Es reicht noch nicht ganz zur Bestehensgrenze von 70%. Nutzen Sie das gezielte Fehlertraining!</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Navigation Options inside Finished Screen */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 max-w-md mx-auto">
-                <button
-                  id="finished-btn-home"
-                  onClick={() => setActiveTab('main')}
-                  className={`cursor-pointer w-full px-6 py-4 font-black rounded-xl text-base sm:text-lg transition-all ${
-                    isN 
-                      ? 'bg-[#4ECDC4] text-white border-4 border-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B] hover:translate-y-0.5 hover:shadow-none' 
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800 shadow-sm border border-slate-200/50'
-                  }`}
-                >
-                  Hauptmenü
-                </button>
-
-                {lastSessionResult.incorrectIds.length > 0 ? (
-                  <button
-                    id="finished-btn-train-errors"
-                    onClick={handleStartRemedialQuiz}
-                    className={`cursor-pointer w-full px-6 py-4 font-black rounded-xl text-base sm:text-lg transition-all ${
-                      isN 
-                        ? 'bg-[#FF6B6B] border-4 border-[#4D3B3B] text-white shadow-[4px_4px_0px_#4D3B3B] hover:translate-y-0.5 hover:shadow-none' 
-                        : 'bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/10'
-                    }`}
-                  >
-                    Falsche korrigieren
-                  </button>
-                ) : (
-                  <button
-                    id="finished-btn-retry"
-                    onClick={handleStartGeneralPractice}
-                    className={`cursor-pointer w-full px-6 py-4 font-black rounded-xl text-base sm:text-lg transition-all ${
-                      isN 
-                        ? 'bg-[#FFD93D] border-4 border-[#4D3B3B] text-[#4D3B3B] shadow-[4px_4px_0px_#4D3B3B] hover:translate-y-0.5 hover:shadow-none' 
-                        : 'bg-teal-500 hover:bg-[#39bcae] text-white shadow-md shadow-teal-500/10'
-                    }`}
-                  >
-                    Anderes Übungsquiz
-                  </button>
-                )}
-              </div>
+        {/* SCREEN 2: SECTIONALIZED THEMEN- / KATEGORIEAUSWAHL */}
+        {screen === 'category_select' && (
+          <div className="space-y-6 max-w-3xl mx-auto w-full animate-fadeIn" id="screen-category-select">
+            <div className="text-center space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800">
+                <ItalianFlag size="sm" /> Niveau {selectedLevel}
+              </span>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900">
+                Wählen Sie einen Übungsbereich
+              </h2>
+              <p className="text-slate-500 font-semibold text-xs md:text-sm">
+                Drücken Sie auf einen Bereich, um gezielt grammatikalische oder Wortschatz-Kapitel ohne Dopplungen zu lernen.
+              </p>
             </div>
 
-            {/* DETAILED QUESTION REVIEW TABLE: Lists all answers from active session with translations and German explanations */}
-            <div 
-              className={`p-6 space-y-4 transition-all duration-300 ${
-                isN 
-                  ? 'bg-white border-4 border-[#4D3B3B] rounded-[24px] shadow-[6px_6px_0px_#4D3B3B] text-[#4D3B3B]' 
-                  : 'bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-md shadow-slate-100/50'
-              }`}
-            >
-              <h3 className={`text-xl sm:text-2xl font-black pb-3 ${isN ? 'border-b-4 border-[#4D3B3B]' : 'border-b border-slate-100 text-slate-800'}`}>Detaillierter Prüfungs-Rückblick</h3>
-              
-              <div className="space-y-4">
-                {activeQuestions.map((q, index) => {
-                  const userAnswerIndex = lastSessionResult.answers[q.id];
-                  const isCorrect = userAnswerIndex !== undefined && q.options_de[userAnswerIndex] === q.richtige_antwort;
-
-                  return (
-                    <div
-                      key={q.id}
-                      className={`p-5 rounded-2xl transition-all duration-300 ${
-                        isN
-                          ? `border-4 ${
-                              isCorrect
-                                ? 'bg-[#E8F5E9] border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
-                                : 'bg-[#FFF5F5] border-[#4D3B3B] shadow-[2px_2px_0px_#4D3B3B]'
-                            }`
-                          : `border ${
-                              isCorrect
-                                ? 'bg-emerald-50/20 border-emerald-100 shadow-sm'
-                                : 'bg-rose-50/20 border-rose-100 shadow-sm'
-                            }`
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-xs uppercase font-mono font-black text-slate-500">
-                          Aufgabe {index + 1}
-                        </span>
-                        
-                        <span 
-                          className={`px-2.5 py-0.5 rounded text-xs font-black transition-all ${
-                            isN
-                              ? `border-2 border-[#4D3B3B] ${
-                                  isCorrect
-                                    ? 'bg-[#4ECDC4] text-white shadow-[1px_1px_0px_#4D3B3B]'
-                                    : 'bg-[#FF6B6B] text-white shadow-[1px_1px_0px_#4D3B3B]'
-                                }`
-                              : `${
-                                  isCorrect
-                                    ? 'bg-emerald-100 text-emerald-700'
-                                    : 'bg-rose-100 text-rose-700'
-                                }`
-                          }`}
-                        >
-                          {isCorrect ? 'Richtig' : 'Falsch'}
+            {/* Grid list of categories */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
+              {availableCategories.map((catKey) => {
+                const info = CATEGORIES[catKey];
+                const poolSize = getFilteredQuestionsPool(selectedLevel, catKey).length;
+                
+                return (
+                  <button
+                    key={catKey}
+                    onClick={() => {
+                      playSound('click');
+                      setSelectedCategory(catKey);
+                      setScreen('mode_select');
+                    }}
+                    className="p-4 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-md rounded-2xl text-left transition-all cursor-pointer flex gap-3.5 items-start group shadow-sm"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 group-hover:bg-[#009246] group-hover:text-white transition-all">
+                      {getIconFromKey(info.icon)}
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      <div className="flex justify-between items-baseline gap-2">
+                        <h4 className="text-base font-extrabold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                          {info.name}
+                        </h4>
+                        <span className="text-[10px] font-black uppercase text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
+                          {poolSize} Fragen
                         </span>
                       </div>
-
-                      <h4 className={`text-lg font-black leading-snug ${isN ? 'text-[#4D3B3B]' : 'text-slate-800'}`}>{q.frage_de}</h4>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                        <div 
-                          className={`p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                            isN 
-                              ? 'bg-white border-2 border-[#4D3B3B]' 
-                              : 'bg-slate-50/80 border border-slate-100'
-                          }`}
-                        >
-                          <span className="text-[10px] uppercase font-black tracking-wider text-[#FF6B6B] block">Ihre Antwort:</span>
-                          <p className={`font-sans font-black mt-0.5 ${isN ? 'text-[#4D3B3B]/90' : 'text-slate-700'}`}>
-                            {userAnswerIndex !== undefined ? q.options_de[userAnswerIndex] : 'Keine Antwort'}
-                          </p>
-                        </div>
-                        <div 
-                          className={`p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                            isN 
-                              ? 'bg-[#E8F5E9] border-2 border-[#4D3B3B]' 
-                              : 'bg-emerald-50 border border-emerald-100'
-                          }`}
-                        >
-                          <span className="text-[10px] uppercase font-black tracking-wider text-[#4ECDC4] block">Richtige Antwort:</span>
-                          <p className="font-sans font-black mt-0.5 text-[#4ECDC4]">
-                            {q.richtige_antwort}
-                          </p>
-                        </div>
-                      </div>
-
-                      <p 
-                        className={`text-xs sm:text-sm p-3 rounded-xl mt-3 font-semibold leading-relaxed transition-all ${
-                          isN 
-                            ? 'bg-[#FFF8E1] border-2 border-[#4D3B3B] text-[#4D3B3B]' 
-                            : 'bg-amber-50/60 border border-amber-100 text-slate-700'
-                        }`}
-                      >
-                        <strong className="text-rose-500 font-extrabold">Lernhinweis:</strong> {q.erklaerung_de}
+                      <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                        {info.desc}
                       </p>
                     </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-center pt-2">
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setScreen('level_select');
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+              >
+                Zurück zur Niveau-Auswahl
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* SCREEN 3: CHOOSE LERNMODUS */}
+        {screen === 'mode_select' && (
+          <div className="space-y-6 max-w-2xl mx-auto w-full animate-fadeIn" id="screen-mode-select">
+            <div className="text-center space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800">
+                <ItalianFlag size="sm" /> Niveau {selectedLevel} • {CATEGORIES[selectedCategory]?.name}
+              </span>
+              <h2 className="text-2xl font-extrabold text-slate-900">
+                {t('mode.title')}
+              </h2>
+              <p className="text-slate-500 font-semibold text-xs md:text-sm">
+                Wählen Sie, ob Sie im entspannten Übungsmodus lernen oder Ihr Wissen prüfen möchten.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Practice Mode */}
+              <button
+                id="btn-mode-practice"
+                onClick={() => {
+                  playSound('click');
+                  handleStartPractice();
+                }}
+                className="w-full p-5 bg-white border-2 border-slate-200 hover:border-[#009246] rounded-2xl text-left transition-all hover:shadow-md cursor-pointer flex gap-4 shadow-sm"
+              >
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    {t('mode.practice_btn')}
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                    Sofortige Übersetzung und Hilfe nach jedem Klick. Perfekt für Senioren, um Vokabeln und Sätze zu verinnerlichen.
+                  </p>
+                </div>
+              </button>
+
+              {/* Exam Mode */}
+              <button
+                id="btn-mode-exam"
+                onClick={() => {
+                  playSound('click');
+                  handleStartExam();
+                }}
+                className="w-full p-5 bg-white border-2 border-slate-200 hover:border-[#ce2b37] rounded-2xl text-left transition-all hover:shadow-md cursor-pointer flex gap-4 shadow-sm"
+              >
+                <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center shrink-0">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    {t('mode.exam_btn')} (10 Fragen Auswertung)
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                    {selectedLevel === 'A1' ? '60 Sekunden Zeitlimit pro Frage.' : '45 Sekunden Zeitlimit pro Frage.'} Keine Sofortkorrekturen. Auswertung am Ende.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="text-center pt-2">
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setScreen('category_select');
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+              >
+                Zurück zur Modulauswahl
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* SCREEN 4: ACTIVE QUIZ DISPLAY */}
+        {screen === 'quiz' && currentQuestion && (
+          <div className="space-y-5 max-w-2xl mx-auto w-full animate-fadeIn" id="screen-quiz">
+            
+            {/* PROGRESS & LEVEL METADATA BAR */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-black text-[#009246] uppercase tracking-wider flex items-center gap-1">
+                      <span>🇮🇹</span>
+                      <span>{quizMode === 'practice' ? 'Übungsmodus' : 'Prüfungsmodus'}</span>
+                      <span>•</span>
+                      <span>{CATEGORIES[selectedCategory]?.name}</span>
+                    </p>
+                  </div>
+                  <p className={`font-extrabold text-slate-800 ${getBodyTextSizeClass()}`}>
+                    {quizMode === 'practice' 
+                      ? `Übungssitzung: ${seenQuestionIds.filter(id => getFilteredQuestionsPool(selectedLevel, selectedCategory).some(q => q.id === id)).length} von ${getFilteredQuestionsPool(selectedLevel, selectedCategory).length} Begriffen gelöst`
+                      : t('quiz.question_counter', {
+                          current: examIndex + 1,
+                          total: examQuestions.length
+                        })}
+                  </p>
+                </div>
+
+                {/* TIMERS ONLY ACTIVE ON EXAM MODE */}
+                {quizMode === 'exam' && (
+                  <div className="flex items-center gap-2 bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-xl text-rose-700 font-bold shrink-0">
+                    <Clock className="w-4 h-4 shrink-0" />
+                    <span className="text-xs font-black font-mono">
+                      {t('quiz.timer_prefix')} {t('quiz.timer_seconds', { seconds: timeLeft })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* PROGRESS BAR RATIO */}
+              <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden" id="quiz-progress-outer">
+                <div
+                  id="quiz-progress-inner"
+                  className={`h-full transition-all duration-300 ${quizMode === 'practice' ? 'bg-[#009246]' : 'bg-rose-600'}`}
+                  style={{ width: `${getSessionProgressPercent()}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* MAIN QUESTION DISPLAY CARD */}
+            <div className="bg-white border-2 border-slate-250/70 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-black bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md">
+                    {currentQuestion.level} • {CATEGORIES[getQuestionCategory(currentQuestion)]?.name || 'Grammatik'} • Frage #{currentQuestion.id}
+                  </span>
+                  
+                  {/* TTS Voice Reader trigger button */}
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      readSentenceAloud(currentQuestion.question, currentQuestion.options[currentQuestion.correctIndex]);
+                    }}
+                    title="Den italienischen Satz vorgelesen anhören"
+                    className="inline-flex items-center gap-1 py-1.5 px-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl hover:bg-emerald-100 transition-colors cursor-pointer text-xs font-bold shrink-0"
+                  >
+                    <Volume2 className="w-4 h-4 text-emerald-800" />
+                    <span>Satz anhören (Aussprache)</span>
+                  </button>
+                </div>
+
+                <div className="py-1">
+                  <p className="font-extrabold text-slate-900 leading-snug tracking-normal text-base md:text-lg">
+                    {currentQuestion.question}
+                  </p>
+                </div>
+              </div>
+
+              {/* SHUFFLED OPTIONS TARGET DECK */}
+              <div className="grid grid-cols-1 gap-3 pt-1" id="options-deck">
+                {shuffledOptions.map((opt, idx) => {
+                  const isCh = idx === clickedOptionIndex;
+                  return (
+                    <button
+                      key={idx}
+                      id={`option-${idx}`}
+                      disabled={answered}
+                      onClick={() => handleOptionClick(idx)}
+                      style={{ opacity: answered && !isCh && (!opt.isCorrect || quizMode === 'exam') ? 0.6 : 1 }}
+                      className={`w-full p-4 border-2 text-left rounded-xl transition-all duration-150 cursor-pointer flex items-center justify-between min-h-[56px] focus:outline-none ${
+                        getBodyTextSizeClass()
+                      } ${
+                        !answered
+                          ? 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900 font-extrabold active:bg-slate-100 focus:border-emerald-600'
+                          : quizMode === 'practice'
+                            ? opt.isCorrect
+                              ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-black shadow-sm'
+                              : isCh
+                                ? 'bg-rose-50 border-rose-500 text-rose-950 font-black'
+                                : 'bg-slate-50 border-slate-200 text-slate-400'
+                            : isCh // Exam mode locks click representation only
+                              ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-black'
+                              : 'bg-slate-50 border-slate-200 text-slate-400'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className={`w-7 h-7 rounded-lg border text-xs font-bold inline-flex items-center justify-center shrink-0 ${
+                          !answered 
+                            ? 'bg-slate-100 border-slate-200 text-slate-600'
+                            : opt.isCorrect && quizMode === 'practice'
+                              ? 'bg-emerald-600 border-emerald-600 text-white'
+                              : isCh && !opt.isCorrect && quizMode === 'practice'
+                                ? 'bg-rose-600 border-rose-600 text-white'
+                                : 'bg-slate-200 border-slate-200 text-slate-400'
+                        }`}>
+                          {String.fromCharCode(65 + idx)}
+                        </span>
+                        <span>{opt.text}</span>
+                      </span>
+                      
+                      {answered && quizMode === 'practice' && opt.isCorrect && (
+                        <Check className="w-5 h-5 text-emerald-700 stroke-[3] shrink-0" />
+                      )}
+                      {answered && quizMode === 'practice' && isCh && !opt.isCorrect && (
+                        <XCircle className="w-5 h-5 text-rose-700 shrink-0" />
+                      )}
+                    </button>
                   );
                 })}
               </div>
+
+              {/* INTERACTIVE FULL-STACK GENERATED AI TRANSLATION BOX (Shown under question in practice) */}
+              {quizMode === 'practice' && (
+                <div className="pt-2 border-t border-slate-200/60 space-y-3">
+                  <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4 space-y-2">
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-emerald-700 fill-emerald-100" />
+                      <span>🤖 Intelligente KI-Übersetzung (Gemini):</span>
+                    </p>
+                    
+                    {loadingAi ? (
+                      <div className="space-y-2 py-1">
+                        <div className="h-4 bg-emerald-200/50 rounded animate-pulse w-3/4"></div>
+                        <div className="h-3 bg-emerald-200/35 rounded animate-pulse w-1/2"></div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <p className={`font-extrabold text-emerald-950 leading-relaxed ${getBodyTextSizeClass()}`}>
+                          {aiTranslation}
+                        </p>
+                        {aiTip && (
+                          <p className={`text-slate-600 italic bg-white/70 px-2.5 py-1.5 rounded-lg border border-emerald-100/40 ${getSubtleTextSizeClass()}`}>
+                            <strong className="text-emerald-800 font-bold not-italic">Didaktik-Tipp:</strong> {aiTip}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* EXPANDED OFFLINE EXPLANATION */}
+              {quizMode === 'practice' && answered && (
+                <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1 animate-fadeIn">
+                  <p className="text-xs font-black text-amber-900 uppercase tracking-widest flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4 text-amber-800" />
+                    <span>Lokal-Erläuterung:</span>
+                  </p>
+                  <p className={`text-slate-700 leading-relaxed font-bold ${getSubtleTextSizeClass()}`}>
+                    {currentQuestion.explanation}
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* ACTION FOOTER NAV CONTROLS */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+              <button
+                id="btn-abort-quiz"
+                onClick={() => {
+                  playSound('click');
+                  handleGoHome();
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-3 bg-white border-2 border-slate-200 rounded-xl font-extrabold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-sm"
+              >
+                Übung abbrechen
+              </button>
+
+              {quizMode === 'practice' && answered && (
+                <button
+                  id="btn-next-question"
+                  onClick={() => {
+                    playSound('click');
+                    handleNextPracticeQuestion();
+                  }}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-[#009246] hover:bg-emerald-600 text-white rounded-xl text-base font-black transition-colors cursor-pointer shadow-sm shadow-emerald-800"
+                >
+                  <span>{t('quiz.next_btn')}</span> <ArrowRight className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            {/* Session statistics visualizer bar */}
+            {quizMode === 'practice' && practiceTotalCount > 0 && (
+              <div className="bg-slate-100 p-2.5 rounded-xl flex items-center justify-between text-xs text-slate-500 font-bold">
+                <span className="flex items-center gap-1.5"><CheckSquare className="w-4 h-4 text-[#009246]" /> Heutige Erfolgsquote:</span>
+                <span className="font-mono text-[#009246]">{practiceCorrectCount} richtig von {practiceTotalCount} Fragen ({Math.round((practiceCorrectCount/practiceTotalCount)*100)}%)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SCREEN 5: EXAM SESSION RESULTS VIEW */}
+        {screen === 'result_screen' && (
+          <div className="space-y-6 max-w-3xl mx-auto w-full animate-fadeIn" id="screen-result">
+            {/* SCORE HERO BANNER */}
+            {(() => {
+              const total = examQuestions.length;
+              const correct = examAnswers.filter((a) => a.isCorrect).length;
+              const percentage = Math.round((correct / total) * 100);
+              const passed = percentage >= 60; // 60% requirement for language certificate passes
+
+              return (
+                <div className="space-y-6">
+                  <div
+                    className={`rounded-2xl p-6 text-center shadow-md border space-y-4 ${
+                      passed
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                        : 'bg-rose-50 border-rose-300 text-rose-950'
+                    }`}
+                  >
+                    <div className="w-14 h-14 rounded-full mx-auto flex items-center justify-center font-bold">
+                      {passed ? (
+                        <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+                      ) : (
+                        <XCircle className="w-12 h-12 text-rose-600" />
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h2 className="text-2xl font-black tracking-tight">
+                        {t('result.title')} ({selectedLevel})
+                      </h2>
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold">{t('result.score_label')}</p>
+                        <p className="text-4xl font-black font-mono text-[#009246]">
+                          {t('result.score_percentage', { percentage })}
+                        </p>
+                      </div>
+                      <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+                        {correct} von {total} Fragen richtig gelöst ({percentage}%)
+                      </p>
+                    </div>
+
+                    <p className={`font-bold leading-normal max-w-lg mx-auto text-slate-700 ${getBodyTextSizeClass()}`}>
+                      {passed ? t('result.passed') : t('result.failed')}
+                    </p>
+                  </div>
+
+                  {/* ANSWER BREAKDOWN REVIEW */}
+                  <div className="space-y-3.5">
+                    <h3 className="text-base font-black text-slate-800 uppercase tracking-wider pl-1 flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-emerald-600" />
+                      <span>Ausführlicher Korrektur- & Grammatikbericht:</span>
+                    </h3>
+
+                    <div className="space-y-3">
+                      {examAnswers.map((item, idx) => {
+                        return (
+                          <div
+                            key={idx}
+                            className={`p-4 rounded-xl border bg-white space-y-2 relative shadow-sm ${
+                              item.isCorrect ? 'border-emerald-100' : 'border-rose-100'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                                Frage {idx + 1}
+                              </span>
+                              <span
+                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                  item.isCorrect
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-rose-100 text-rose-800'
+                                }`}
+                              >
+                                {item.isCorrect ? 'Richtig' : 'Falsch'}
+                              </span>
+                            </div>
+
+                            <p className="text-sm font-extrabold text-slate-900 leading-relaxed">
+                              {item.questionText}
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
+                              <div>
+                                <span className="text-slate-400 font-bold block">Ausgewählte Antwort:</span>
+                                <span
+                                  className={`font-black ${
+                                    item.isCorrect ? 'text-emerald-700' : 'text-rose-700'
+                                  }`}
+                                >
+                                  {item.selectedOptionText}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 font-bold block">Richtige Lösung:</span>
+                                <span className="font-black text-emerald-700">
+                                  {item.correctOptionText}
+                                </span>
+                              </div>
+                            </div>
+
+                            {item.explanation && (
+                              <div className="mt-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-150">
+                                <strong className="font-extrabold text-emerald-800">Grammatik-Lektion:</strong> {item.explanation}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* RETRY ACTIONS ROW */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                    <button
+                      id="btn-retry-exam"
+                      onClick={() => {
+                        playSound('click');
+                        handleStartExam();
+                      }}
+                      className="w-full sm:flex-1 py-3.5 px-5 bg-[#009246] hover:bg-emerald-600 text-white rounded-xl font-black flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm text-sm"
+                    >
+                      <RotateCcw className="w-4 h-4" /> {t('result.retry_btn')}
+                    </button>
+                    <button
+                      id="btn-result-home"
+                      onClick={() => {
+                        playSound('click');
+                        handleGoHome();
+                      }}
+                      className="w-full sm:flex-1 py-3.5 px-5 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 rounded-xl font-black flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-sm"
+                    >
+                      <Home className="w-4 h-4" /> {t('result.home_btn')}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </main>
 
-      {/* COMPLIANT PROFESSIONAL FOOTER */}
-      <footer 
-        className={`max-w-6xl w-full mx-auto mt-8 pt-6 text-center space-y-2 select-none transition-all ${
-          isN 
-            ? 'border-t-4 border-[#4D3B3B] text-[#4D3B3B]/70 font-semibold' 
-            : 'border-t border-slate-200 text-slate-400 font-medium'
-        }`}
-      >
-        <p className="text-xs leading-normal font-sans">
-          Accordo di Integrazione • Italienisches Schulungsprogramm der <strong className={`${isN ? '' : 'text-indigo-600'}`}>App Italiano</strong>
+      {/* FOOTER ACCREDITATION (Mandatory, with Developed by OlamGeorg details) */}
+      <footer className="text-center py-4 mt-8 border-t-2 border-emerald-500 text-slate-500 space-y-1.5 bg-emerald-50/40 rounded-xl p-4">
+        <p className="text-sm font-semibold hover:text-slate-700 transition-colors">
+          Developed by:{' '}
+          <a
+            href="https://github.com/OlamGeorg"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#009246] hover:underline font-black bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200"
+          >
+            OlamGeorg
+          </a>{' '}
+          • Email:{' '}
+          <a
+            href="mailto:olamgeorg9@gmail.com"
+            className="text-[#ce2b37] hover:underline inline-flex items-center gap-1 font-black bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200"
+          >
+            <Mail className="w-3.5 h-3.5 inline text-[#ce2b37]" /> olamgeorg9@gmail.com
+          </a>
         </p>
-        <p className="text-xs font-mono tracking-wide">
-          Entwickelt und gepflegt von <span className="font-sans font-black text-rose-500">Olamgeorg</span> • Support-Tel: <a href="tel:09134088925" className="hover:underline font-bold">09134088925</a> | E-Mail: <a href="mailto:olamgeorg9@gmail.com" className="hover:underline font-bold">olamgeorg9@gmail.com</a>
+        <p className="text-[11px] font-bold text-slate-500 leading-relaxed max-w-lg mx-auto">
+          🇮🇹 Italiano-App • Zertifiziertes Syllabus-Lernportal für Deutschsprachige © {new Date().getUTCFullYear()} • Entwickelt zur PWA-Offline-Eignung und optimalen barrierefreien Lesbarkeit für alle Altersklassen.
         </p>
       </footer>
     </div>

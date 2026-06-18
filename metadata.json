@@ -1,6 +1,6 @@
 {
-  "name": "App Italiano",
-  "description": "Italienisches A1-A2 Integrationscurriculum-Trainingsportal. Vollständig PWA-fähig für Offline-Übungen, mit integrierten Prüfungssimulatoren und Schwäche-Trainer.",
+  "name": "Italiano",
+  "description": "Italienisch A1 & A2 Lernportal für Deutschsprachige mit interaktivem Übungsmodus und realitätsnaher Prüfungssimulation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

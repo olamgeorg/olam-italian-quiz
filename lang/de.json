@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "Deutsch A1/A2 Lernportal",
+    "subtitle": "Interaktives Quiz zur Vorbereitung"
+  },
+  "home": {
+    "welcome": "Willkommen beim Deutsch-Lernportal!",
+    "select_level": "Bitte wählen Sie Ihr Sprachniveau aus:",
+    "level_a1": "A1 Deutsch (Anfänger)",
+    "level_a2": "A2 Deutsch (Fortgeschrittene)",
+    "level_desc": "Starten Sie mit gezielten Übungssätzen oder einer echten Prüfungssimulation.",
+    "footer_credit": "Unterstützt durch lokale Lerninhalte • Keine Registrierung erforderlich"
+  },
+  "mode": {
+    "title": "Lernmodus wählen",
+    "desc_a1": "Sie haben das Niveau A1 ausgewählt.",
+    "desc_a2": "Sie haben das Niveau A2 ausgewählt.",
+    "practice_btn": "Übungsmodus",
+    "practice_desc": "Lernen ohne Zeitdruck. Sofortige Auswertung, Erklärungen und Tipps nach jedem Klick.",
+    "exam_btn": "Prüfungsmodus",
+    "exam_desc_a1": "60 Sekunden Zeit pro Frage. Keine Erklärungen während des Tests. Auswertung ganz am Ende.",
+    "exam_desc_a2": "45 Sekunden Zeit pro Frage. Keine Erklärungen während des Tests. Auswertung ganz am Ende.",
+    "back_btn": "Zurück zur Niveau-Auswahl"
+  },
+  "quiz": {
+    "question_counter": "Frage {current} von {total}",
+    "timer_seconds": "{seconds} Sek.",
+    "timer_prefix": "Verbleibende Zeit:",
+    "next_btn": "Nächste Frage",
+    "practice_explanation_title": "💡 Erklärung / Grammatiktipp:",
+    "practice_correct": "Richtig!",
+    "practice_incorrect": "Falsch! Die richtige Antwort ist:",
+    "exam_warning": "Prüfung läuft – Antworten können nicht rückgängig gemacht werden."
+  },
+  "result": {
+    "title": "Prüfungsergebnis",
+    "score_label": "Ihr Ergebnis:",
+    "score_percentage": "{percentage}% richtig",
+    "correct_answers": "Richtige Antworten:",
+    "incorrect_answers": "Falsche Antworten:",
+    "passed": "Herzlichen Glückwunsch! Sie haben die Prüfung bestanden! 🎉",
+    "failed": "Leider nicht genügend Punkte. Versuchen Sie es noch einmal! 📚",
+    "retry_btn": "Wiederholen",
+    "home_btn": "Zurück zur Startseite"
+  }
+}

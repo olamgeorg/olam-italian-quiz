@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "Italiano",
+    "subtitle": "Italienisch A1 & A2 Lernportal für Deutschsprachige"
+  },
+  "home": {
+    "welcome": "Benvenuti di cuore! Italienisch lernen!",
+    "select_level": "Wählen Sie Ihr gewünschtes Sprachniveau aus:",
+    "level_a1": "A1 Italiano (Anfänger)",
+    "level_a2": "A2 Italiano (Fortgeschrittene)",
+    "level_desc": "Tauche ein in das Sprachgefühl Italiens mit unserem didaktischen Trainer. Perfekt für Hobby, Reise oder Zertifikate.",
+    "footer_credit": "Über 600 sorgfältig erstellte Fragen • 100% offline-fähig als App installierbar"
+  },
+  "mode": {
+    "title": "Wählen Sie Ihren Lernmodus",
+    "desc_a1": "Niveau A1: Sie üben grundlegende Sätze, Artikelbestimmungen, einfache Fragestellungen und elementares Vokabular.",
+    "desc_a2": "Niveau A2: Sie üben fortgeschrittene Satzverbindungen, Pronomen, Vergangenheit (Passato Prossimo) und Höflichkeitsformen.",
+    "practice_btn": "Übungsmodus (Kein Zeitdruck)",
+    "practice_desc": "Sofortige Rückmeldung mit deutscher Übersetzung und grammatikalischen Erläuterungen nach jeder Antwort.",
+    "exam_btn": "Prüfungsmodus (Mit Timer)",
+    "exam_desc_a1": "60 Sekunden Zeitlimit pro Frage. Keine Zwischenerklärungen. Detaillierte statistische Auswertung nach 10 Prüfungsfragen.",
+    "exam_desc_a2": "45 Sekunden Zeitlimit pro Frage. Keine Zwischenerklärungen. Detaillierte statistische Auswertung nach 10 Prüfungsfragen.",
+    "back_btn": "Zurück zur Übersicht"
+  },
+  "quiz": {
+    "question_counter": "Frage {current} von {total}",
+    "timer_seconds": "{seconds} Sek.",
+    "timer_prefix": "Verbleibende Zeit:",
+    "next_btn": "Nächste Frage",
+    "practice_explanation_title": "💡 Übersetzung & Grammatik-Tipp:",
+    "practice_correct": "Molto bene! 🎉 Richtig gelernt!",
+    "practice_incorrect": "Falsch! Die korrekte Antwort lautet:",
+    "exam_warning": "Prüfung läuft – Antworten können nicht rückgängig gemacht werden."
+  },
+  "result": {
+    "title": "Prüfungsauswertung",
+    "score_label": "Ergebnis:",
+    "score_percentage": "{percentage}% richtig gelöst",
+    "correct_answers": "Richtige Fragen:",
+    "incorrect_answers": "Fehlerhafte Fragen:",
+    "passed": "Congratulazioni! 🎉 Sie haben die Prüfung erfolgreich bestanden. Bravissimo!",
+    "failed": "Nicht ganz gereicht. Wiederholen Sie das Training, um Ihre italienischen Kenntnisse zu festigen! 📚",
+    "retry_btn": "Prüfung wiederholen",
+    "home_btn": "Zurück zur Startseite"
+  }
+}
