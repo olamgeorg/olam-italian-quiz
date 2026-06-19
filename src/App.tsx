@@ -873,20 +873,20 @@ export default function App() {
         {/* SCREEN 1: LEVEL SELECTION */}
         {screen === 'level_select' && (
           <div className="space-y-6 max-w-2xl mx-auto w-full animate-fadeIn" id="screen-level-select">
-            <div className="text-center space-y-3">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800">
+            <div className="text-center flex flex-col items-center gap-4 mb-4">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-sm font-extrabold text-emerald-800 shadow-sm shrink-0 mb-2">
                 <Sparkles className="w-3.5 h-3.5" /> Amici d'Italia • Sprachkurs
               </div>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-950">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-950 leading-tight">
                 {t('home.welcome')}
               </h2>
-              <p className="text-slate-600 font-bold text-sm md:text-base">
+              <p className="text-slate-750 font-extrabold text-lg sm:text-xl leading-normal">
                 {t('home.select_level')}
               </p>
             </div>
 
             {/* A1 / A2 SELECTION BUTTONS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
               <button
                 id="btn-level-a1"
                 onClick={() => {
@@ -895,23 +895,23 @@ export default function App() {
                   setSelectedCategory('all');
                   setScreen('category_select');
                 }}
-                className="group p-6 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-lg rounded-2xl text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[180px] shadow-sm"
+                className="group p-6 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-lg rounded-2xl text-left transition-all duration-200 cursor-pointer flex flex-col justify-between gap-4 min-h-[220px] shadow-sm"
               >
-                <div className="space-y-2">
+                <div className="space-y-3 w-full">
                   <div className="flex justify-between items-center">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-black text-xl group-hover:bg-[#009246] group-hover:text-white transition-colors shadow-inner">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-black text-xl group-hover:bg-[#009246] group-hover:text-white transition-colors shadow-inner">
                       A1
                     </div>
                     <ItalianFlag size="sm" />
                   </div>
-                  <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                  <h3 id="lvl-title-a1" className="text-2xl font-black text-slate-900 group-hover:text-[#009246] transition-colors leading-tight">
                     {t('home.level_a1')} (Anfänger)
                   </h3>
-                  <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed break-words">
                     Einführung & Grundfertigkeiten. Bestimmte Artikel, einfache Hilfsverben im Präsens, Uhrzeit-Wochentage-Set und Vokabular für Reise und Begrüßungen.
                   </p>
                 </div>
-                <div className="text-xs font-black text-emerald-800 flex items-center gap-1 mt-4 group-hover:translate-x-1 transition-transform">
+                <div className="text-sm font-black text-emerald-800 flex items-center gap-1.5 mt-2 group-hover:translate-x-1.5 transition-transform">
                   Module ansehen <ArrowRight className="w-4 h-4" />
                 </div>
               </button>
@@ -924,25 +924,25 @@ export default function App() {
                   setSelectedCategory('all');
                   setScreen('category_select');
                 }}
-                className="group p-6 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-lg rounded-2xl text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[180px] shadow-sm"
+                className="group p-6 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-lg rounded-2xl text-left transition-all duration-200 cursor-pointer flex flex-col justify-between gap-4 min-h-[220px] shadow-sm"
               >
-                <div className="space-y-2">
+                <div className="space-y-3 w-full">
                   <div className="flex justify-between items-center">
-                    <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-850 flex items-center justify-center font-black text-xl group-hover:bg-[#009246] group-hover:text-white transition-colors shadow-inner">
+                    <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-850 flex items-center justify-center font-black text-xl group-hover:bg-[#009246] group-hover:text-white transition-colors shadow-inner">
                       A2
                     </div>
                     <div className="flex gap-1">
                       <ItalianFlag size="sm" />
                     </div>
                   </div>
-                  <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                  <h3 id="lvl-title-a2" className="text-2xl font-black text-slate-900 group-hover:text-[#009246] transition-colors leading-tight">
                     {t('home.level_a2')} (Fortgeschrittene)
                   </h3>
-                  <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed break-words">
                     Fortgeschrittene Grammatik. Das Passato Prossimo, reflexiv & direkte Pronomen, unregelmäßige Futurstudien, zusammengesetzte Präpositionen und Alltagssätze.
                   </p>
                 </div>
-                <div className="text-xs font-black text-emerald-800 flex items-center gap-1 mt-4 group-hover:translate-x-1 transition-transform">
+                <div className="text-sm font-black text-emerald-800 flex items-center gap-1.5 mt-2 group-hover:translate-x-1.5 transition-transform">
                   Module ansehen <ArrowRight className="w-4 h-4" />
                 </div>
               </button>
@@ -950,13 +950,13 @@ export default function App() {
 
             {/* PWA INSTALLATION ADVICE BLOCK */}
             <div id="pwa-guide-card" className="bg-gradient-to-br from-emerald-950 to-slate-900 text-white rounded-2xl p-6 shadow-md border border-emerald-800 space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-300">
-                  <Smartphone className="w-6 h-6 shrink-0" />
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-300 shrink-0">
+                  <Smartphone className="w-7 h-7" />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-emerald-200">Italiano als App auf Ihrem Gerät installieren</h3>
-                  <p className="text-xs text-slate-300 leading-relaxed mt-1">
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <h3 className="text-xl font-black text-emerald-250 leading-snug">Italiano als App auf Ihrem Gerät installieren</h3>
+                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-semibold break-words">
                     Lerne unabhängig von Internet oder mobilem Datenvolumen. Die App startet blitzschnell und ist perfekt auf die Bedürfnisse älterer Lerner abgestimmt.
                   </p>
                 </div>
@@ -966,34 +966,34 @@ export default function App() {
               {showInstallBtn && (
                 <button
                   onClick={triggerNativeInstall}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#009246] hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-xs font-black transition-colors cursor-pointer text-white shadow-sm shadow-emerald-900"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 px-5 bg-[#009246] hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-sm font-black transition-colors cursor-pointer text-white shadow-sm shadow-emerald-900"
                 >
-                  <Download className="w-4 h-4 animate-bounce" /> Jetzt App laden ("Italiano")
+                  <Download className="w-5 h-5 animate-bounce" /> Jetzt App laden ("Italiano")
                 </button>
               )}
 
               {/* General Manual Installation Instructions */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-emerald-800/60 text-xs">
-                <div className="space-y-1 bg-black/10 p-2.5 rounded-xl">
-                  <p className="font-bold text-emerald-300 flex items-center gap-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-emerald-800/60 text-xs sm:text-sm">
+                <div className="space-y-1 bg-black/10 p-3 rounded-xl">
+                  <p className="font-extrabold text-emerald-300 flex items-center gap-1 text-sm sm:text-base">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Android & Chrome
                   </p>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
                     Tippe oben rechts im Chrome-Browser auf die <strong className="text-white">drei Punkte (⋮)</strong> und wähle <strong className="text-white">"App installieren"</strong> oder drücke den Installationspfeil in der Suchleiste.
                   </p>
                 </div>
-                <div className="space-y-1 bg-black/10 p-2.5 rounded-xl">
-                  <p className="font-bold text-emerald-300 flex items-center gap-1">
+                <div className="space-y-1 bg-black/10 p-3 rounded-xl">
+                  <p className="font-extrabold text-emerald-300 flex items-center gap-1 text-sm sm:text-base">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> iPhone/iPad (Safari)
                   </p>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
                     Tippe unten in der Safari-Steuerung auf das <strong className="text-white">Teilen-Symbol (↑)</strong> und wähle im Menü den Punkt <strong className="text-white">"Zum Home-Bildschirm"</strong> aus.
                   </p>
                 </div>
               </div>
             </div>
 
-            <p className="text-center text-xs text-slate-400 font-semibold">
+            <p className="text-center text-sm sm:text-base text-slate-500 font-extrabold pb-8">
               {t('home.footer_credit')}
             </p>
           </div>
@@ -1002,20 +1002,20 @@ export default function App() {
         {/* SCREEN 2: SECTIONALIZED THEMEN- / KATEGORIEAUSWAHL */}
         {screen === 'category_select' && (
           <div className="space-y-6 max-w-3xl mx-auto w-full animate-fadeIn" id="screen-category-select">
-            <div className="text-center space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800">
+            <div className="text-center flex flex-col items-center gap-4 mb-4">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-sm font-extrabold text-emerald-800 shadow-sm shrink-0 mb-2">
                 <ItalianFlag size="sm" /> Niveau {selectedLevel}
               </span>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 Wählen Sie einen Übungsbereich
               </h2>
-              <p className="text-slate-500 font-semibold text-xs md:text-sm">
+              <p className="text-slate-700 font-semibold text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
                 Drücken Sie auf einen Bereich, um gezielt grammatikalische oder Wortschatz-Kapitel ohne Dopplungen zu lernen.
               </p>
             </div>
 
             {/* Grid list of categories */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5 pt-2">
               {availableCategories.map((catKey) => {
                 const info = CATEGORIES[catKey];
                 const poolSize = getFilteredQuestionsPool(selectedLevel, catKey).length;
@@ -1028,21 +1028,21 @@ export default function App() {
                       setSelectedCategory(catKey);
                       setScreen('mode_select');
                     }}
-                    className="p-4 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-md rounded-2xl text-left transition-all cursor-pointer flex gap-3.5 items-start group shadow-sm"
+                    className="p-5 bg-white border-2 border-slate-200 hover:border-[#009246] hover:shadow-md rounded-2xl text-left transition-all cursor-pointer flex flex-col sm:flex-row gap-4 items-start group shadow-sm w-full min-h-[120px]"
                   >
-                    <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 group-hover:bg-[#009246] group-hover:text-white transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 group-hover:bg-[#009246] group-hover:text-white transition-all shadow-inner">
                       {getIconFromKey(info.icon)}
                     </div>
-                    <div className="space-y-1 flex-1">
-                      <div className="flex justify-between items-baseline gap-2">
-                        <h4 className="text-base font-extrabold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                    <div className="space-y-2 flex-1 min-w-0 w-full">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-1 w-full">
+                        <h4 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-[#009246] transition-colors break-words leading-tight">
                           {info.name}
                         </h4>
-                        <span className="text-[10px] font-black uppercase text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
+                        <span className="text-xs font-black uppercase text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full shrink-0">
                           {poolSize} Fragen
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                      <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-semibold break-words">
                         {info.desc}
                       </p>
                     </div>
@@ -1051,13 +1051,13 @@ export default function App() {
               })}
             </div>
 
-            <div className="text-center pt-2">
+            <div className="text-center pt-4">
               <button
                 onClick={() => {
                   playSound('click');
                   setScreen('level_select');
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-350 rounded-xl text-sm font-black text-slate-700 transition-colors cursor-pointer shadow-sm"
               >
                 Zurück zur Niveau-Auswahl
               </button>
@@ -1068,29 +1068,29 @@ export default function App() {
         {/* SCREEN 3: CHOOSE LERNMODUS */}
         {screen === 'mode_select' && (
           <div className="space-y-6 max-w-2xl mx-auto w-full animate-fadeIn" id="screen-mode-select">
-            <div className="text-center space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-800">
+            <div className="text-center flex flex-col items-center gap-4 mb-4">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-sm font-extrabold text-emerald-800 shadow-sm shrink-0 mb-2">
                 <ItalianFlag size="sm" /> Niveau {selectedLevel} • {CATEGORIES[selectedCategory]?.name}
               </span>
-              <h2 className="text-2xl font-extrabold text-slate-900">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 {t('mode.title')}
               </h2>
-              <p className="text-slate-500 font-semibold text-xs md:text-sm">
+              <p className="text-slate-705 font-semibold text-sm sm:text-base md:text-lg max-w-xl mx-auto leading-normal">
                 Wählen Sie, ob Sie im entspannten Übungsmodus lernen oder Ihr Wissen prüfen möchten.
               </p>
             </div>
 
             {/* HIGHLY INTERACTIVE VIBRANT DIFFICULTY SELECTOR CARD */}
-            <div className="bg-emerald-50/40 border-2 border-emerald-500/20 rounded-2xl p-5 shadow-xs space-y-3">
+            <div className="bg-emerald-50/40 border-2 border-emerald-500/20 rounded-2xl p-5 sm:p-6 shadow-xs space-y-3.5">
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">Schwierigkeitsgrad wählen</h3>
+                <h3 className="text-base font-black text-slate-900 uppercase tracking-wide">Schwierigkeitsgrad wählen</h3>
               </div>
-              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-600 font-semibold leading-relaxed break-words">
                 Bestimmt das Zeitlimit für den Prüfungsmodus (Einfach = Extra Zeit, Mittel = Standard, Schwer = Turbo-Zeit).
               </p>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 {[
                   { key: 'easy', label: 'Einfach 🟢', desc: 'A-D Wahl • Extra Zeit' },
                   { key: 'normal', label: 'Mittel 🟡', desc: 'A-D Wahl • Standard' },
@@ -1102,13 +1102,13 @@ export default function App() {
                       playSound('click');
                       setDifficulty(item.key as any);
                     }}
-                    className={`p-3.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                    className={`p-4 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 min-h-[72px] ${
                       difficulty === item.key
                         ? 'bg-emerald-600 border-emerald-700 text-white shadow-md font-black scale-[1.02]'
                         : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800 hover:border-emerald-600/50'
                     }`}
                   >
-                    <span className="text-sm font-black">{item.label}</span>
+                    <span className="text-sm sm:text-base font-black">{item.label}</span>
                     <span className={`text-[11px] font-bold leading-tight ${difficulty === item.key ? 'text-emerald-100' : 'text-slate-500'}`}>{item.desc}</span>
                   </button>
                 ))}
@@ -1123,16 +1123,16 @@ export default function App() {
                   playSound('click');
                   handleStartPractice();
                 }}
-                className="w-full p-5 bg-white border-2 border-slate-200 hover:border-[#009246] rounded-2xl text-left transition-all hover:shadow-md cursor-pointer flex gap-4 shadow-sm"
+                className="w-full p-6 bg-white border-2 border-slate-200 hover:border-[#009246] rounded-2xl text-left transition-all hover:shadow-md cursor-pointer flex flex-col sm:flex-row items-start gap-4 shadow-sm"
               >
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                   <BookOpen className="w-6 h-6" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-base font-extrabold text-slate-900">
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
                     {t('mode.practice_btn')}
                   </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-semibold break-words">
                     Sofortige Übersetzung und Hilfe nach jedem Klick. Perfekt für Senioren, um Vokabeln und Sätze zu verinnerlichen.
                   </p>
                 </div>
@@ -1145,29 +1145,29 @@ export default function App() {
                   playSound('click');
                   handleStartExam();
                 }}
-                className="w-full p-5 bg-white border-2 border-slate-200 hover:border-[#ce2b37] rounded-2xl text-left transition-all hover:shadow-md cursor-pointer flex gap-4 shadow-sm"
+                className="w-full p-6 bg-white border-2 border-slate-200 hover:border-[#ce2b37] rounded-2xl text-left transition-all hover:shadow-md cursor-pointer flex flex-col sm:flex-row items-start gap-4 shadow-sm"
               >
                 <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center shrink-0">
                   <Clock className="w-6 h-6" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-base font-extrabold text-slate-900">
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
                     {t('mode.exam_btn')} (10 Fragen Auswertung)
                   </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-semibold break-words">
                     {selectedLevel === 'A1' ? '60 Sekunden Zeitlimit pro Frage.' : '45 Sekunden Zeitlimit pro Frage.'} Keine Sofortkorrekturen. Auswertung am Ende.
                   </p>
                 </div>
               </button>
             </div>
 
-            <div className="text-center pt-2">
+            <div className="text-center pt-4">
               <button
                 onClick={() => {
                   playSound('click');
                   setScreen('category_select');
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-350 rounded-xl text-sm font-black text-slate-700 transition-colors cursor-pointer shadow-sm"
               >
                 Zurück zur Modulauswahl
               </button>
