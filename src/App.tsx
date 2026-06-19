@@ -1505,29 +1505,13 @@ export default function App() {
         )}
       </main>
 
-      {/* FOOTER ACCREDITATION (Mandatory, with Developed by OlamGeorg details) */}
+      {/* FOOTER ACCREDITATION (Updated to olamidegeorg with no links) */}
       <footer className="text-center py-4 mt-8 border-t-2 border-emerald-500 text-slate-500 space-y-1.5 bg-emerald-50/40 rounded-xl p-4">
-        <p className="text-sm font-semibold hover:text-slate-700 transition-colors">
+        <p className="text-sm font-semibold text-slate-700">
           Developed by:{' '}
-          <span className="font-black text-[#009246] bg-emerald-50 px-2.5 py-1.5 rounded-md border border-emerald-200">
-            OlamGeorg
-          </span>{' '}
-          • App-Kanal:{' '}
-          <a
-            href="https://ais-pre-ee646qm7pzz7xdsgd7ogod-535059019595.europe-west1.run.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-emerald-700 hover:underline font-black bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200"
-          >
-            Italiano Lernportal (Live)
-          </a>{' '}
-          • Support:{' '}
-          <a
-            href="mailto:olamgeorg9@gmail.com"
-            className="text-[#ce2b37] hover:underline inline-flex items-center gap-1 font-black bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200"
-          >
-            <Mail className="w-3.5 h-3.5 inline text-[#ce2b37]" /> olamgeorg9@gmail.com
-          </a>
+          <span className="font-black text-[#009246] bg-emerald-50 px-3 py-1.5 rounded-md border border-emerald-200 shadow-2xs">
+            olamidegeorg
+          </span>
         </p>
         <p className="text-[11px] font-bold text-slate-500 leading-relaxed max-w-lg mx-auto">
           🇮🇹 Italiano-App • Zertifiziertes Syllabus-Lernportal für Deutschsprachige © {new Date().getUTCFullYear()} • Entwickelt zur PWA-Offline-Eignung und optimalen barrierefreien Lesbarkeit für alle Altersklassen.
