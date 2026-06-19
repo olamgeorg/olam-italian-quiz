@@ -24,7 +24,7 @@ function makeQuestion(
 const pool: Question[] = [];
 let currentId = 1;
 
-console.log("Starte systematische Generierung von 3700+ Fragen...");
+console.log("Starte systematische Generierung von 7900+ Fragen...");
 
 // ==========================================
 // 1. MODULE: praesens_modal (Verben: Gegenwart / Präsens)
@@ -89,12 +89,12 @@ const pronounsList = [
 
 // Generiere Verbkonjugationsübungen
 let countPre = 0;
-// Loop bis wir 530 Fragen für praesens_modal haben
-while (countPre < 530) {
+// Loop bis wir 1130 Fragen für praesens_modal haben
+while (countPre < 1130) {
   for (const v of presentVerbsList) {
-    if (countPre >= 530) break;
+    if (countPre >= 1130) break;
     for (const p of pronounsList) {
-      if (countPre >= 530) break;
+      if (countPre >= 1130) break;
       
       const isA1 = countPre % 2 === 0;
       const level: 'A1' | 'A2' = isA1 ? 'A1' : 'A2';
@@ -168,12 +168,12 @@ const auxiliaryAverePronouns = [
 ];
 
 let countPast = 0;
-while (countPast < 530) {
+while (countPast < 1130) {
   // AVERE-Perfekt Drills
   for (const v of auxiliaryAvereParticiples) {
-    if (countPast >= 530) break;
+    if (countPast >= 1130) break;
     for (const p of auxiliaryAverePronouns) {
-      if (countPast >= 530) break;
+      if (countPast >= 1130) break;
       
       const correctWord = p.aux;
       const wrong: [string, string, string] = auxiliaryAverePronouns
@@ -199,7 +199,7 @@ while (countPast < 530) {
   ];
 
   for (const ev of essereVerbs) {
-    if (countPast >= 530) break;
+    if (countPast >= 1130) break;
     
     // Maria (weiblich)
     pool.push(makeQuestion(
@@ -212,7 +212,7 @@ while (countPast < 530) {
     ));
     countPast++;
 
-    if (countPast >= 530) break;
+    if (countPast >= 1130) break;
     // I ragazzi (männlicher Plural)
     pool.push(makeQuestion(
       currentId++,
@@ -224,7 +224,7 @@ while (countPast < 530) {
     ));
     countPast++;
 
-    if (countPast >= 530) break;
+    if (countPast >= 1130) break;
     // Le amiche (weiblicher Plural)
     pool.push(makeQuestion(
       currentId++,
@@ -245,10 +245,10 @@ while (countPast < 530) {
   ];
 
   for (const iv of impVerbs) {
-    if (countPast >= 530) break;
+    if (countPast >= 1130) break;
     const prons = ["Io", "Tu", "Lui/Lei", "Noi", "Voi", "Loro"];
     for (let i = 0; i < 6; i++) {
-      if (countPast >= 530) break;
+      if (countPast >= 1130) break;
       const correctForm = iv.forms[i];
       const wrong: [string, string, string] = [
         iv.forms[(i + 1) % 6],
@@ -286,7 +286,7 @@ const condVerbs = [
 ];
 
 let countFuture = 0;
-while (countFuture < 530) {
+while (countFuture < 1130) {
   // Futuro Semplice Drills (Endings: -ò, -ai, -à, -emo, -ete, -anno)
   const futProns = [
     { sub: "Io", end: "ò" },
@@ -298,9 +298,9 @@ while (countFuture < 530) {
   ];
 
   for (const fv of futVerbs) {
-    if (countFuture >= 530) break;
+    if (countFuture >= 1130) break;
     for (const fp of futProns) {
-      if (countFuture >= 530) break;
+      if (countFuture >= 1130) break;
       const correctForm = fv.stem + fp.end;
       const wrong: [string, string, string] = futProns
         .filter(x => x.sub !== fp.sub)
@@ -326,9 +326,9 @@ while (countFuture < 530) {
   ];
 
   for (const cv of condVerbs) {
-    if (countFuture >= 530) break;
+    if (countFuture >= 1130) break;
     for (const cp of condProns) {
-      if (countFuture >= 530) break;
+      if (countFuture >= 1130) break;
       const correctForm = cv.stem + cp.end;
       const wrong: [string, string, string] = condProns
         .filter(x => x.sub !== cp.sub)
@@ -351,7 +351,7 @@ while (countFuture < 530) {
   ];
 
   for (const iv of imperVerbs) {
-    if (countFuture >= 530) break;
+    if (countFuture >= 1130) break;
     // Tu-Aufforderung
     pool.push(makeQuestion(
       currentId++,
@@ -363,7 +363,7 @@ while (countFuture < 530) {
     ));
     countFuture++;
 
-    if (countFuture >= 530) break;
+    if (countFuture >= 1130) break;
     // Voi-Aufforderung
     pool.push(makeQuestion(
       currentId++,
@@ -415,9 +415,9 @@ const nounsArticlesData = [
 ];
 
 let countArticles = 0;
-while (countArticles < 530) {
+while (countArticles < 1130) {
   for (const n of nounsArticlesData) {
-    if (countArticles >= 530) break;
+    if (countArticles >= 1130) break;
 
     // Definite Article Drill
     const correctDet = n.det;
@@ -430,7 +430,7 @@ while (countArticles < 530) {
     pool.push(makeQuestion(currentId++, 'A1', qText1, correctDet, detWrong, expl1));
     countArticles++;
 
-    if (countArticles >= 530) break;
+    if (countArticles >= 1130) break;
 
     // Indefinite Article Drill
     const correctInd = n.ind;
@@ -443,7 +443,7 @@ while (countArticles < 530) {
     pool.push(makeQuestion(currentId++, 'A1', qText2, correctInd, indWrong, expl2));
     countArticles++;
 
-    if (countArticles >= 530) break;
+    if (countArticles >= 1130) break;
 
     // Plural Form Drill
     const correctPl = n.pl;
@@ -490,9 +490,9 @@ const prepArticolateData = [
 ];
 
 let countPreps = 0;
-while (countPreps < 530) {
+while (countPreps < 1130) {
   for (const bp of basePrepositions) {
-    if (countPreps >= 530) break;
+    if (countPreps >= 1130) break;
     pool.push(makeQuestion(
       currentId++,
       'A1',
@@ -505,7 +505,7 @@ while (countPreps < 530) {
   }
 
   for (const pa of prepArticolateData) {
-    if (countPreps >= 530) break;
+    if (countPreps >= 1130) break;
     pool.push(makeQuestion(
       currentId++,
       'A2',
@@ -545,10 +545,10 @@ const indirectPronouns = [
 ];
 
 let countAdjPron = 0;
-while (countAdjPron < 530) {
+while (countAdjPron < 1130) {
   // Possessive Drill M
   for (const ap of adjPossessive) {
-    if (countAdjPron >= 530) break;
+    if (countAdjPron >= 1130) break;
     pool.push(makeQuestion(
       currentId++,
       'A1',
@@ -559,7 +559,7 @@ while (countAdjPron < 530) {
     ));
     countAdjPron++;
 
-    if (countAdjPron >= 530) break;
+    if (countAdjPron >= 1130) break;
     pool.push(makeQuestion(
       currentId++,
       'A1',
@@ -573,7 +573,7 @@ while (countAdjPron < 530) {
 
   // Direct Pronouns Drill
   for (const dp of directPronouns) {
-    if (countAdjPron >= 530) break;
+    if (countAdjPron >= 1130) break;
     pool.push(makeQuestion(
       currentId++,
       'A2',
@@ -587,7 +587,7 @@ while (countAdjPron < 530) {
 
   // Indirect Pronouns Drill
   for (const ip of indirectPronouns) {
-    if (countAdjPron >= 530) break;
+    if (countAdjPron >= 1130) break;
     pool.push(makeQuestion(
       currentId++,
       'A2',
@@ -637,10 +637,10 @@ const travelDailyPhrases = [
 ];
 
 let countVocab = 0;
-while (countVocab < 530) {
+while (countVocab < 1130) {
   // Numbers Vocabulary drills
   for (const num of tensNumbers) {
-    if (countVocab >= 530) break;
+    if (countVocab >= 1130) break;
     const wrong: [string, string, string] = tensNumbers
       .filter(x => x.it !== num.it)
       .map(x => x.it)
@@ -659,7 +659,7 @@ while (countVocab < 530) {
 
   // Foods Vocabulary drills
   for (const f of vocabularyFoods) {
-    if (countVocab >= 530) break;
+    if (countVocab >= 1130) break;
     const wrong: [string, string, string] = vocabularyFoods
       .filter(x => x.it !== f.it)
       .map(x => x.it)
@@ -678,7 +678,7 @@ while (countVocab < 530) {
 
   // Travel Phrasing drills
   for (const tp of travelDailyPhrases) {
-    if (countVocab >= 530) break;
+    if (countVocab >= 1130) break;
     pool.push(makeQuestion(
       currentId++,
       'A2',
@@ -691,7 +691,7 @@ while (countVocab < 530) {
   }
 
   // Clock drills
-  if (countVocab < 530) {
+  if (countVocab < 1130) {
     pool.push(makeQuestion(
       currentId++,
       'A1',
@@ -702,7 +702,7 @@ while (countVocab < 530) {
     ));
     countVocab++;
   }
-  if (countVocab < 530) {
+  if (countVocab < 1130) {
     pool.push(makeQuestion(
       currentId++,
       'A1',

@@ -29,7 +29,7 @@ Dieses Webprojekt basiert auf modernsten, leichtgewichtigen Webtechnologien:
 
 1.  **Repository klonen**:
     ```bash
-    git clone https://github.com/OlamGeorg/georg-edu-italian-quiz.git
+    git clone https://github.com/georg-edu/georg-edu-italian-quiz.git
     cd georg-edu-italian-quiz
     ```
 
@@ -64,10 +64,8 @@ Diese Anwendung implementiert die vollständige PWA-Spezifikation:
 
 Das Portal wird direkt betreut und gepflegt durch das Studien-Zentrum der **Georg.edu**:
 
-*   **Entwickler & Inhaber**: Olamgeorg
+*   **Entwickelt von**: olamidegeorg
 *   **Telefonischer Support / Hotline**: [09134088925](tel:09134088925)
-*   **E-Mail-Anfragen**: [olamgeorg9@gmail.com](mailto:olamgeorg9@gmail.com)
-*   **Webseite**: [Georg.edu Portal](https://github.com/OlamGeorg)
 
 ---
 

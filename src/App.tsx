@@ -383,7 +383,7 @@ export default function App() {
     });
   };
 
-  // Fisher-Yates mapping configuration so option buttons are dynamically scrambled
+  // Fisher-Yates mapping configuration so option buttons are dynamically scrambled with exactly A, B, C, D choices
   const mapAndShuffleOptions = (q: Question) => {
     const correctOption = {
       text: q.options[q.correctIndex],
@@ -397,14 +397,8 @@ export default function App() {
     // Dynamic shuffle of wrong answers
     const shuffledWrong = shuffleFisherYatesGeneric(wrongOptions);
 
-    let finalOptions = [correctOption];
-    if (difficulty === 'easy') {
-      finalOptions.push(shuffledWrong[0]);
-    } else if (difficulty === 'normal') {
-      finalOptions.push(shuffledWrong[0], shuffledWrong[1]);
-    } else {
-      finalOptions = finalOptions.concat(shuffledWrong);
-    }
+    // Always keep all 4 options (A-D)
+    const finalOptions = [correctOption, ...shuffledWrong];
 
     return shuffleFisherYatesGeneric(finalOptions);
   };
@@ -699,23 +693,23 @@ export default function App() {
     return allQuestions.some(q => q.level === selectedLevel && getQuestionCategory(q) === catKey);
   });
 
-  // Typography scaling helpers optimized for older senior German readers (with larger, phone-responsive defaults)
+  // Typography scaling helpers optimized for older senior German readers (with larger, phone-responsive defaults, minimum base 18-19px e.g. text-lg)
   const getQuestionTextSizeClass = () => {
-    if (textSize === 'groß') return 'text-2xl md:text-3xl';
-    if (textSize === 'extra-groß') return 'text-3xl md:text-4xl';
-    return 'text-xl md:text-2xl'; // Enhanced default for senior legibility on phones
+    if (textSize === 'groß') return 'text-3xl md:text-4xl';
+    if (textSize === 'extra-groß') return 'text-4xl md:text-5xl';
+    return 'text-2xl md:text-3xl'; // Enhanced default for senior legibility on phones
   };
 
   const getBodyTextSizeClass = () => {
-    if (textSize === 'groß') return 'text-lg md:text-xl';
-    if (textSize === 'extra-groß') return 'text-xl md:text-2xl';
-    return 'text-base md:text-lg'; // Enhanced default for senior legibility on phones
+    if (textSize === 'groß') return 'text-xl md:text-2xl';
+    if (textSize === 'extra-groß') return 'text-2xl md:text-3xl';
+    return 'text-lg md:text-xl'; // Enhanced default for senior legibility on phones (text-lg is 18px, text-xl is 20px)
   };
 
   const getSubtleTextSizeClass = () => {
-    if (textSize === 'groß') return 'text-base md:text-lg';
-    if (textSize === 'extra-groß') return 'text-lg md:text-xl';
-    return 'text-sm md:text-base'; // Enhanced default for senior legibility on phones
+    if (textSize === 'groß') return 'text-lg md:text-xl';
+    if (textSize === 'extra-groß') return 'text-xl md:text-2xl';
+    return 'text-base md:text-lg'; // Enhanced default for senior legibility on phones
   };
 
   function getIconFromKey(iconName: string) {
@@ -736,7 +730,7 @@ export default function App() {
       
       {/* ACCESS PRECISE STYLINGS & UPPER DECK BRAND HEADER */}
       <header className="py-4 mb-4 border-b-2 border-emerald-500">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#009246] via-[#FFD100] to-[#ce2b37] p-[3px] flex items-center justify-center shrink-0 shadow-md">
               <div className="w-full h-full bg-white rounded-[9px] flex items-center justify-center">
@@ -744,15 +738,15 @@ export default function App() {
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 id="brand-title" className="text-2xl font-black text-slate-900 tracking-tight">{t('app.title')}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 id="brand-title" className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{t('app.title')}</h1>
                 <ItalianFlag size="md" />
               </div>
-              <p className="text-xs text-slate-500 font-bold">{t('app.subtitle')}</p>
+              <p className="text-xs text-slate-550 font-bold">{t('app.subtitle')}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
             {/* SENIOR ACCESSIBILITY ASSISTANCE PANEL TOGGLER */}
             <button
               onClick={() => {
@@ -781,11 +775,11 @@ export default function App() {
               <h3 className="text-xs font-black uppercase text-emerald-950 tracking-wider">Altengerechte Bedienungshilfen & Einstellungen</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Size Modifier Option Buttons */}
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-emerald-900 block">Optimale Schriftgröße für leichtes Lesen:</span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {(['normal', 'groß', 'extra-groß'] as const).map((sz) => (
                     <button
                       key={sz}
@@ -810,7 +804,7 @@ export default function App() {
               {/* Speech Rates speed customization buttons */}
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-emerald-900 block">Sprechgeschwindigkeit des Vorlesers (IT):</span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[[0.9, 'Normal'], [0.75, 'Langsam'], [0.6, 'Deutlich']].map(([rate, label]) => (
                     <button
                       key={rate as number}
@@ -831,11 +825,11 @@ export default function App() {
               </div>
 
               {/* Dynamic Difficulty Level Buttons */}
-              <div className="space-y-1.5 col-span-1 md:col-span-2 pt-1 animate-fadeIn">
+              <div className="space-y-1.5 col-span-1 lg:col-span-2 pt-1 animate-fadeIn">
                 <span className="text-xs font-bold text-emerald-900 block flex items-center gap-1">
                   <Sliders className="w-3.5 h-3.5" /> Schwierigkeit & Fragetiefe:
                 </span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
                     { val: 'easy', text: 'Einfach 🟢' },
                     { val: 'normal', text: 'Mittel 🟡' },
@@ -1093,14 +1087,14 @@ export default function App() {
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">Schwierigkeitsgrad wählen</h3>
               </div>
               <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                Legt fest, wie viele Antwortmöglichkeiten eingeblendet werden und wie viel Zeit Sie im Examen haben.
+                Bestimmt das Zeitlimit für den Prüfungsmodus (Einfach = Extra Zeit, Mittel = Standard, Schwer = Turbo-Zeit).
               </p>
               
-              <div className="grid grid-cols-3 gap-2.5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                 {[
-                  { key: 'easy', label: 'Einfach 🟢', desc: '2 Antworten • Extra Zeit' },
-                  { key: 'normal', label: 'Mittel 🟡', desc: '3 Antworten • Standard' },
-                  { key: 'hard', label: 'Schwer 🔴', desc: '4 Antworten • Turbo' }
+                  { key: 'easy', label: 'Einfach 🟢', desc: 'A-D Wahl • Extra Zeit' },
+                  { key: 'normal', label: 'Mittel 🟡', desc: 'A-D Wahl • Standard' },
+                  { key: 'hard', label: 'Schwer 🔴', desc: 'A-D Wahl • Turbo' }
                 ].map((item) => (
                   <button
                     key={item.key}
@@ -1108,14 +1102,14 @@ export default function App() {
                       playSound('click');
                       setDifficulty(item.key as any);
                     }}
-                    className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                    className={`p-3.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
                       difficulty === item.key
-                        ? 'bg-emerald-600 border-emerald-700 text-white shadow-md font-black scale-[1.03]'
+                        ? 'bg-emerald-600 border-emerald-700 text-white shadow-md font-black scale-[1.02]'
                         : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800 hover:border-emerald-600/50'
                     }`}
                   >
-                    <span className="text-xs font-black">{item.label}</span>
-                    <span className={`text-[9px] font-bold ${difficulty === item.key ? 'text-emerald-100' : 'text-slate-500'}`}>{item.desc}</span>
+                    <span className="text-sm font-black">{item.label}</span>
+                    <span className={`text-[11px] font-bold leading-tight ${difficulty === item.key ? 'text-emerald-100' : 'text-slate-500'}`}>{item.desc}</span>
                   </button>
                 ))}
               </div>
@@ -1250,8 +1244,8 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="py-1">
-                  <p className="font-black text-slate-950 leading-relaxed text-xs sm:text-sm md:text-base">
+                <div className="py-2.5">
+                  <p className={`font-black text-slate-950 leading-normal ${getQuestionTextSizeClass()}`}>
                     {currentQuestion.question}
                   </p>
                 </div>
@@ -1268,7 +1262,7 @@ export default function App() {
                       disabled={answered}
                       onClick={() => handleOptionClick(idx)}
                       style={{ opacity: answered && !isCh && (!opt.isCorrect || quizMode === 'exam') ? 0.6 : 1 }}
-                      className={`w-full p-4 border-2 text-left rounded-xl transition-all duration-150 cursor-pointer flex items-center justify-between min-h-[56px] focus:outline-none ${
+                      className={`w-full p-4 border-2 text-left rounded-xl transition-all duration-150 cursor-pointer flex items-start justify-between gap-3 min-h-[56px] focus:outline-none ${
                         getBodyTextSizeClass()
                       } ${
                         !answered
@@ -1284,8 +1278,8 @@ export default function App() {
                               : 'bg-slate-50 border-slate-200 text-slate-400'
                       }`}
                     >
-                      <span className="flex items-center gap-3">
-                        <span className={`w-7 h-7 rounded-lg border text-xs font-bold inline-flex items-center justify-center shrink-0 ${
+                      <span className="flex items-start gap-3 flex-1 min-w-0">
+                        <span className={`w-7 h-7 rounded-lg border text-xs font-bold inline-flex items-center justify-center shrink-0 mt-0.5 ${
                           !answered 
                             ? 'bg-slate-100 border-slate-200 text-slate-600'
                             : opt.isCorrect && quizMode === 'practice'
@@ -1296,14 +1290,14 @@ export default function App() {
                         }`}>
                           {String.fromCharCode(65 + idx)}
                         </span>
-                        <span>{opt.text}</span>
+                        <span className="flex-1 min-w-0 break-words leading-tight">{opt.text}</span>
                       </span>
                       
                       {answered && quizMode === 'practice' && opt.isCorrect && (
-                        <Check className="w-5 h-5 text-emerald-700 stroke-[3] shrink-0" />
+                        <Check className="w-5 h-5 text-emerald-700 stroke-[3] shrink-0 mt-1" />
                       )}
                       {answered && quizMode === 'practice' && isCh && !opt.isCorrect && (
-                        <XCircle className="w-5 h-5 text-rose-700 shrink-0" />
+                        <XCircle className="w-5 h-5 text-rose-700 shrink-0 mt-1" />
                       )}
                     </button>
                   );
